@@ -146,6 +146,13 @@ function render() {
       throw new Error(`Unknown phase: ${state.phase}`);
   }
   fitActiveScreen();
+  syncBrandButton();
+}
+
+function syncBrandButton() {
+  const btn = document.getElementById('brand');
+  if (!btn) return;
+  btn.disabled = state.phase === 'intro';
 }
 
 function wireMuteButton() {
@@ -159,4 +166,14 @@ function wireMuteButton() {
 }
 
 wireMuteButton();
+wireBrandButton();
 render();
+
+function wireBrandButton() {
+  const btn = document.getElementById('brand');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    if (state.phase === 'intro') return;
+    setState(reset());
+  });
+}
