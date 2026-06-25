@@ -52,15 +52,18 @@ function setState(next) {
 /** Mount the right play view for the current state: the reveal of a just-locked
  *  pick, or a fresh spinning round. Used by both render() and resume(). */
 function mountPlaying() {
+  const onBack = () => setState(openModeSelect()); // quit current build -> mode menu
   if (state.reveal) {
     teardownRound = mountReveal(root, state, {
       onAdvance: () => setState(advanceAfterReveal(state)),
       onPause: pauseGame,
+      onBack,
     });
   } else {
     teardownRound = mountPlayRound(root, state, {
       onLocked: (playerId) => setState(lockPick(state, playerId)),
       onPause: pauseGame,
+      onBack,
     });
   }
 }
@@ -98,11 +101,9 @@ function resumeGame() {
   fitActiveScreen();
 }
 
-/** Scale the freshly-rendered content screen to fit the viewport (no scroll).
- *  The play screen is excluded — it already fills the height via flexbox. */
+/** Scale the freshly-rendered screen to fit the viewport (no scroll). */
 function fitActiveScreen() {
-  const screen = root.querySelector('.screen');
-  fitScreen(screen && !screen.classList.contains('play') ? screen : null);
+  fitScreen(root.querySelector('.screen'));
 }
 
 function render() {

@@ -300,10 +300,14 @@ body {
   align-items: center;
   gap: 10px;
 }
-.play__pause {
+.play__pause,
+.play__back {
   width: 36px;
   height: 36px;
   font-size: 0.9rem;
+}
+.play__back {
+  font-size: 1.2rem;
 }
 .progress__label {
   font-weight: 800;
@@ -580,6 +584,16 @@ body {
 }
 .rating--ok .card__stat-value {
   color: var(--ink-dim);
+}
+
+/* Reveal confirmation line (shown above the Continue button). */
+.reveal-tag {
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  color: var(--gold);
+  margin-top: 2px;
 }
 
 /* --- Slot tray ------------------------------------------------------------ */

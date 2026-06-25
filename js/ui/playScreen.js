@@ -14,20 +14,17 @@ import { createReel } from './reel.js';
 import { playerCard } from './playerCard.js';
 import { sfx } from './sound.js';
 
-const REVEAL_MS = 1100; // how long the locked pick is shown before auto-advancing
-
 /**
  * Mount the spinning round.
  * @param {HTMLElement} root
  * @param {import('../core/state.js').GameState} state
- * @param {{ onLocked:(playerId:string)=>void, onPause:()=>void }} handlers
+ * @param {{ onLocked:(playerId:string)=>void, onPause:()=>void, onBack:()=>void }} handlers
  * @returns {() => void}  cleanup
  */
-export function mountPlayRound(root, state, { onLocked, onPause }) {
+export function mountPlayRound(root, state, { onLocked, onPause, onBack }) {
   clear(root);
   const category = currentCategory(state);
   const stage = el('div', { class: 'reel-stage' });
-  const pauseBtn = makePauseBtn(onPause);
 
   const lockBtn = el('button', {
     class: 'btn btn--lock',
@@ -39,7 +36,7 @@ export function mountPlayRound(root, state, { onLocked, onPause }) {
     class: 'screen play',
     style: { '--accent': category.accent },
     children: [
-      progressBar(state, pauseBtn),
+      progressBar(state, [makeBackBtn(onBack), makePauseBtn(onPause)]),
       categoryBanner(category),
       stage,
       lockBtn,
@@ -82,26 +79,29 @@ export function mountPlayRound(root, state, { onLocked, onPause }) {
 }
 
 /**
- * Mount the reveal of a just-locked pick (state.reveal must be set).
+ * Mount the reveal of a just-locked pick (state.reveal must be set). It waits
+ * for the player to press Continue — it never auto-advances.
  * @param {HTMLElement} root
  * @param {import('../core/state.js').GameState} state
- * @param {{ onAdvance:()=>void, onPause:()=>void }} handlers
+ * @param {{ onAdvance:()=>void, onPause:()=>void, onBack:()=>void }} handlers
  * @returns {() => void}  cleanup
  */
-export function mountReveal(root, state, { onAdvance, onPause }) {
+export function mountReveal(root, state, { onAdvance, onPause, onBack }) {
   clear(root);
   const category = categoriesForMode(state.mode)[state.round];
   const player = playerForMode(state.mode, state.reveal.playerId);
-  const pauseBtn = makePauseBtn(onPause);
+  const isLastRound = state.round + 1 >= categoriesForMode(state.mode).length;
 
   const stage = el('div', { class: 'reel-stage' });
   const card = playerCard(player, { category });
   card.classList.add('card--locked');
   stage.append(card);
 
+  const locked = el('div', { class: 'reveal-tag', text: `✅  ${player.short} locked in` });
+
   const continueBtn = el('button', {
     class: 'btn btn--lock',
-    text: `✅  Locked: ${player.short}`,
+    text: isLastRound ? '🐐  See Your GOAT' : 'Next Round  ▶',
     attrs: { type: 'button' },
   });
 
@@ -109,9 +109,10 @@ export function mountReveal(root, state, { onAdvance, onPause }) {
     class: 'screen play',
     style: { '--accent': category.accent },
     children: [
-      progressBar(state, pauseBtn),
+      progressBar(state, [makeBackBtn(onBack), makePauseBtn(onPause)]),
       categoryBanner(category),
       stage,
+      locked,
       continueBtn,
       slotTray(state),
     ],
@@ -124,7 +125,6 @@ export function mountReveal(root, state, { onAdvance, onPause }) {
     advanced = true;
     onAdvance();
   };
-  const timer = window.setTimeout(advance, REVEAL_MS);
 
   continueBtn.addEventListener('click', () => {
     sfx.click();
@@ -143,7 +143,6 @@ export function mountReveal(root, state, { onAdvance, onPause }) {
   window.addEventListener('keydown', onKey);
 
   return () => {
-    window.clearTimeout(timer);
     window.removeEventListener('keydown', onKey);
   };
 }
@@ -163,7 +162,21 @@ function makePauseBtn(onPause) {
   return btn;
 }
 
-function progressBar(state, pauseBtn) {
+/** Back button — quits the current build and returns to the mode menu. */
+function makeBackBtn(onBack) {
+  const btn = el('button', {
+    class: 'iconbtn play__back',
+    text: '←',
+    attrs: { type: 'button', 'aria-label': 'Back to mode menu' },
+  });
+  btn.addEventListener('click', () => {
+    sfx.click();
+    onBack();
+  });
+  return btn;
+}
+
+function progressBar(state, controls) {
   const categories = categoriesForMode(state.mode);
   const dots = categories.map((_, i) =>
     el('span', {
@@ -176,7 +189,7 @@ function progressBar(state, pauseBtn) {
       el('div', {
         class: 'progress__left',
         children: [
-          pauseBtn,
+          ...controls,
           el('div', { class: 'progress__label', text: `Round ${state.round + 1} of ${categories.length}` }),
         ],
       }),
