@@ -18,16 +18,21 @@ function apply() {
   el.style.height = 'auto';
 
   // Available = the parent's content box (clientHeight includes padding, so
-  // subtract it) minus a 1px guard against sub-pixel clipping.
+  // subtract it).
   const frame = el.parentElement;
   const cs = getComputedStyle(frame);
   const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-  const available = frame.clientHeight - padY - 1;
+  const available = frame.clientHeight - padY;
   const natural = el.offsetHeight;
 
+  // We anchor at the top and do our own vertical positioning so scaling and
+  // centring never fight (flex `justify-content: center` would centre the
+  // unscaled — too-tall — box and clip its top before the scale even applies).
+  el.style.transformOrigin = 'top center';
   if (natural > available) {
-    el.style.transformOrigin = 'top center';
-    el.style.transform = `scale(${available / natural})`;
+    el.style.transform = `scale(${(available - 1) / natural})`; // shrink to fit
+  } else {
+    el.style.transform = `translateY(${Math.round((available - natural) / 2)}px)`; // centre
   }
 }
 

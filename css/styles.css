@@ -114,9 +114,6 @@ body {
   padding: 6px max(16px, env(safe-area-inset-left)) 10px max(16px, env(safe-area-inset-right));
   display: flex;
   flex-direction: column;
-  /* Centre content screens vertically when there's spare height; the play
-     screen is flex:1 and fills regardless. */
-  justify-content: center;
 }
 .footer {
   text-align: center;
@@ -400,10 +397,11 @@ body {
 }
 .reel-card--in,
 .reel-card--out {
-  /* Symmetric ease so both cards travel at a matched pace through the crossover
-     — the incoming and outgoing read as one continuous, flowing strip. */
-  animation-duration: var(--rd, 0.22s);
-  animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
+  /* Constant-velocity (linear) glide so faces flow past as one continuous,
+     steady stream — no per-card accelerate/decelerate "pulsing". The slide
+     spans the full cadence (reel.js), so it never pauses between faces. */
+  animation-duration: var(--rd, 0.2s);
+  animation-timing-function: linear;
   animation-fill-mode: both;
 }
 .reel-card--in {
@@ -412,25 +410,32 @@ body {
 .reel-card--out {
   animation-name: reel-out;
 }
-/* Horizontal carousel: the next player slides in from the right while the last
-   one slides off to the left, so mid-transition you see them flanking centre. */
+/* Horizontal carousel: the next player glides in from the right while the last
+   glides off to the left. Opacity fades only near the clipped edges, so cards
+   stay crisp and solid through the centre instead of ghosting. */
 @keyframes reel-in {
-  from {
-    transform: translateX(58%) scale(0.94);
+  0% {
+    transform: translateX(60%) scale(0.95);
     opacity: 0;
   }
-  to {
+  35% {
+    opacity: 1;
+  }
+  100% {
     transform: translateX(0) scale(1);
     opacity: 1;
   }
 }
 @keyframes reel-out {
-  from {
+  0% {
     transform: translateX(0) scale(1);
     opacity: 1;
   }
-  to {
-    transform: translateX(-58%) scale(0.94);
+  65% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-60%) scale(0.95);
     opacity: 0;
   }
 }

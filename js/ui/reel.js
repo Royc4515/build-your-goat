@@ -9,11 +9,10 @@ import { shuffle } from '../core/random.js';
 import { sfx } from './sound.js';
 import { getSetting } from '../core/settings.js';
 
-// Base cadence (ms) between faces, by user-chosen reel speed. Tuned on the slow
-// side so each transition spans several frames and reads as smooth, continuous
-// motion at the display's refresh rate rather than a strobe. The cadence is also
-// the player's reaction window — slower = easier to nail a target, faster = harder.
-const SPIN_MS_BY_SPEED = { chill: 340, normal: 240, hyper: 150 };
+// Base cadence (ms) between faces, by user-chosen reel speed. The cadence is the
+// player's reaction window — slower = easier to nail a target, faster = harder.
+// "normal" is deliberately brisk so the default game takes real timing skill.
+const SPIN_MS_BY_SPEED = { chill: 320, normal: 190, hyper: 115 };
 
 /**
  * @param {Object} cfg
@@ -27,7 +26,7 @@ export function createReel({ mount, category, pool, onSettled }) {
   const order = shuffle(pool);
   const spinMs = SPIN_MS_BY_SPEED[getSetting('reelSpeed')] ?? SPIN_MS_BY_SPEED.normal;
   const animate = getSetting('spinFx') !== false;
-  const slideMs = Math.round(spinMs * 0.96); // spans almost the full tick for continuous flow
+  const slideMs = spinMs; // spans the full tick → one continuous, constant-speed stream
 
   let index = 0;
   let current = null;
