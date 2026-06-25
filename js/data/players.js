@@ -1,0 +1,126 @@
+// Roster of NBA legends and stars used to build your GOAT.
+// Each player has attribute ratings (0-99) used both for the reel display and
+// for the final GOAT score, team colors that theme the card art, and an `nbaId`
+// for the official NBA headshot. If a photo ever fails to load, the card falls
+// back to CSS-only jersey art (see playerCard.js) so nothing breaks.
+
+/**
+ * @typedef {Object} Player
+ * @property {string} id        Stable unique id (kebab-case).
+ * @property {string} name      Full display name.
+ * @property {string} short     Short surname used on the card.
+ * @property {string} monogram  1-2 letters shown on the jersey fallback art.
+ * @property {number} number    Jersey number.
+ * @property {string} team      Team abbreviation.
+ * @property {string} era       Decade-ish label, used for chemistry flavor.
+ * @property {[string, string]} colors  [primary, secondary] hex colors.
+ * @property {Object} attrs     Attribute ratings keyed by category id.
+ * @property {number} nbaId     NBA.com person id for the official headshot.
+ */
+
+/** @type {Player[]} */
+export const PLAYERS = Object.freeze([
+  mk('jordan', 'Michael Jordan', 'Jordan', 'MJ', 23, 'CHI', '90s', ['#CE1141', '#000000'],
+    { scoring: 99, playmaking: 85, defense: 96, athleticism: 97, clutch: 99, leadership: 98 }, 893),
+  mk('lebron', 'LeBron James', 'James', 'LJ', 23, 'LAL', '2010s', ['#552583', '#FDB927'],
+    { scoring: 96, playmaking: 97, defense: 90, athleticism: 99, clutch: 92, leadership: 95 }, 2544),
+  mk('kobe', 'Kobe Bryant', 'Bryant', 'KB', 24, 'LAL', '2000s', ['#552583', '#FDB927'],
+    { scoring: 97, playmaking: 84, defense: 92, athleticism: 93, clutch: 98, leadership: 93 }, 977),
+  mk('magic', 'Magic Johnson', 'Johnson', 'MJ', 32, 'LAL', '80s', ['#552583', '#FDB927'],
+    { scoring: 86, playmaking: 99, defense: 82, athleticism: 88, clutch: 93, leadership: 97 }, 77142),
+  mk('bird', 'Larry Bird', 'Bird', 'LB', 33, 'BOS', '80s', ['#007A33', '#FFFFFF'],
+    { scoring: 92, playmaking: 90, defense: 82, athleticism: 74, clutch: 96, leadership: 94 }, 1449),
+  mk('curry', 'Stephen Curry', 'Curry', 'SC', 30, 'GSW', '2010s', ['#1D428A', '#FFC72C'],
+    { scoring: 96, playmaking: 91, defense: 78, athleticism: 84, clutch: 95, leadership: 90 }, 201939),
+  mk('durant', 'Kevin Durant', 'Durant', 'KD', 35, 'HOU', '2010s', ['#CE1141', '#000000'],
+    { scoring: 98, playmaking: 84, defense: 84, athleticism: 90, clutch: 93, leadership: 82 }, 201142),
+  mk('shaq', "Shaquille O'Neal", "O'Neal", 'SO', 34, 'LAL', '2000s', ['#552583', '#FDB927'],
+    { scoring: 93, playmaking: 70, defense: 88, athleticism: 92, clutch: 86, leadership: 88 }, 406),
+  mk('duncan', 'Tim Duncan', 'Duncan', 'TD', 21, 'SAS', '2000s', ['#000000', '#C4CED4'],
+    { scoring: 86, playmaking: 80, defense: 95, athleticism: 80, clutch: 90, leadership: 96 }, 1495),
+  mk('hakeem', 'Hakeem Olajuwon', 'Olajuwon', 'HO', 34, 'HOU', '90s', ['#CE1141', '#000000'],
+    { scoring: 88, playmaking: 74, defense: 97, athleticism: 91, clutch: 90, leadership: 89 }, 165),
+  mk('kareem', 'Kareem Abdul-Jabbar', 'Abdul-Jabbar', 'KA', 33, 'LAL', '80s', ['#552583', '#FDB927'],
+    { scoring: 95, playmaking: 78, defense: 89, athleticism: 85, clutch: 92, leadership: 90 }, 76003),
+  mk('wilt', 'Wilt Chamberlain', 'Chamberlain', 'WC', 13, 'PHI', '60s', ['#006BB6', '#ED174C'],
+    { scoring: 97, playmaking: 76, defense: 92, athleticism: 96, clutch: 80, leadership: 84 }, 76375),
+  mk('russell', 'Bill Russell', 'Russell', 'BR', 6, 'BOS', '60s', ['#007A33', '#FFFFFF'],
+    { scoring: 72, playmaking: 78, defense: 99, athleticism: 90, clutch: 95, leadership: 99 }, 78049),
+  mk('giannis', 'Giannis Antetokounmpo', 'Antetokounmpo', 'GA', 34, 'MIL', '2020s', ['#00471B', '#EEE1C6'],
+    { scoring: 93, playmaking: 82, defense: 94, athleticism: 98, clutch: 88, leadership: 90 }, 203507),
+  mk('jokic', 'Nikola Jokic', 'Jokic', 'NJ', 15, 'DEN', '2020s', ['#0E2240', '#FEC524'],
+    { scoring: 92, playmaking: 96, defense: 84, athleticism: 72, clutch: 93, leadership: 91 }, 203999),
+  mk('luka', 'Luka Doncic', 'Doncic', 'LD', 77, 'LAL', '2020s', ['#552583', '#FDB927'],
+    { scoring: 95, playmaking: 94, defense: 76, athleticism: 82, clutch: 92, leadership: 86 }, 1629029),
+  mk('iverson', 'Allen Iverson', 'Iverson', 'AI', 3, 'PHI', '2000s', ['#006BB6', '#ED174C'],
+    { scoring: 90, playmaking: 88, defense: 80, athleticism: 95, clutch: 90, leadership: 85 }, 947),
+  mk('wade', 'Dwyane Wade', 'Wade', 'DW', 3, 'MIA', '2000s', ['#98002E', '#F9A01B'],
+    { scoring: 90, playmaking: 86, defense: 87, athleticism: 93, clutch: 92, leadership: 88 }, 2548),
+  mk('dirk', 'Dirk Nowitzki', 'Nowitzki', 'DN', 41, 'DAL', '2010s', ['#00538C', '#B8C4CA'],
+    { scoring: 92, playmaking: 76, defense: 74, athleticism: 75, clutch: 94, leadership: 90 }, 1717),
+  mk('westbrook', 'Russell Westbrook', 'Westbrook', 'RW', 0, 'SAC', '2010s', ['#5A2D81', '#000000'],
+    { scoring: 88, playmaking: 90, defense: 80, athleticism: 97, clutch: 82, leadership: 84 }, 201566),
+  mk('cp3', 'Chris Paul', 'Paul', 'CP', 3, 'LAC', '2010s', ['#1D428A', '#C8102E'],
+    { scoring: 82, playmaking: 97, defense: 88, athleticism: 80, clutch: 90, leadership: 92 }, 101108),
+  mk('kawhi', 'Kawhi Leonard', 'Leonard', 'KL', 2, 'LAC', '2010s', ['#C8102E', '#1D428A'],
+    { scoring: 90, playmaking: 80, defense: 97, athleticism: 89, clutch: 94, leadership: 84 }, 202695),
+  mk('tatum', 'Jayson Tatum', 'Tatum', 'JT', 0, 'BOS', '2020s', ['#007A33', '#FFFFFF'],
+    { scoring: 91, playmaking: 82, defense: 86, athleticism: 88, clutch: 87, leadership: 85 }, 1628369),
+  mk('embiid', 'Joel Embiid', 'Embiid', 'JE', 21, 'PHI', '2020s', ['#006BB6', '#ED174C'],
+    { scoring: 94, playmaking: 78, defense: 90, athleticism: 86, clutch: 85, leadership: 82 }, 203954),
+  mk('davis', 'Anthony Davis', 'Davis', 'AD', 3, 'DAL', '2020s', ['#BA0C2F', '#0C2340'],
+    { scoring: 88, playmaking: 74, defense: 94, athleticism: 90, clutch: 84, leadership: 80 }, 203076),
+  mk('ja', 'Ja Morant', 'Morant', 'JM', 12, 'MEM', '2020s', ['#5D76A9', '#12173F'],
+    { scoring: 87, playmaking: 89, defense: 74, athleticism: 96, clutch: 85, leadership: 80 }, 1629630),
+  mk('dame', 'Damian Lillard', 'Lillard', 'DL', 0, 'MIL', '2010s', ['#00471B', '#EEE1C6'],
+    { scoring: 91, playmaking: 88, defense: 72, athleticism: 83, clutch: 97, leadership: 88 }, 203081),
+  mk('pippen', 'Scottie Pippen', 'Pippen', 'SP', 33, 'CHI', '90s', ['#CE1141', '#000000'],
+    { scoring: 82, playmaking: 88, defense: 95, athleticism: 90, clutch: 86, leadership: 87 }, 937),
+  mk('barkley', 'Charles Barkley', 'Barkley', 'CB', 34, 'PHX', '90s', ['#1D1160', '#E56020'],
+    { scoring: 88, playmaking: 80, defense: 82, athleticism: 88, clutch: 84, leadership: 86 }, 787),
+  mk('malone', 'Karl Malone', 'Malone', 'KM', 32, 'UTA', '90s', ['#002B5C', '#00471B'],
+    { scoring: 90, playmaking: 78, defense: 86, athleticism: 89, clutch: 80, leadership: 88 }, 252),
+  mk('vince', 'Vince Carter', 'Carter', 'VC', 15, 'TOR', '2000s', ['#CE1141', '#000000'],
+    { scoring: 87, playmaking: 78, defense: 78, athleticism: 99, clutch: 84, leadership: 78 }, 1713),
+  mk('tmac', 'Tracy McGrady', 'McGrady', 'TM', 1, 'HOU', '2000s', ['#CE1141', '#000000'],
+    { scoring: 91, playmaking: 84, defense: 80, athleticism: 94, clutch: 88, leadership: 80 }, 1503),
+  mk('avdija', 'Deni Avdija', 'Avdija', 'DA', 8, 'POR', '2020s', ['#E03A3E', '#000000'],
+    { scoring: 84, playmaking: 83, defense: 86, athleticism: 87, clutch: 81, leadership: 81 }, 1630166),
+]);
+
+/** Build a frozen player record, keeping the call sites above compact. */
+function mk(id, name, short, monogram, number, team, era, colors, attrs, nbaId) {
+  return Object.freeze({
+    id,
+    name,
+    short,
+    monogram,
+    number,
+    team,
+    era,
+    colors: Object.freeze(colors),
+    attrs: Object.freeze(attrs),
+    nbaId,
+  });
+}
+
+/** Official NBA headshot URL (transparent-background cutout) for a player. */
+export function headshotUrl(player) {
+  return `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.nbaId}.png`;
+}
+
+/** Warm the browser cache so the fast-cycling reel never shows blank frames. */
+export function preloadHeadshots() {
+  for (const p of PLAYERS) {
+    const img = new Image();
+    img.src = headshotUrl(p);
+  }
+}
+
+/** Fast lookup by id, frozen so callers can't mutate the index. */
+export const PLAYERS_BY_ID = Object.freeze(
+  PLAYERS.reduce((acc, p) => {
+    acc[p.id] = p;
+    return acc;
+  }, {})
+);

@@ -1,0 +1,1175 @@
+/* ===========================================================================
+   Build Your GOAT — styles
+   Mobile-first (the game is a vertical, TikTok-style experience). All player
+   art is CSS-only, themed per team via --c1 / --c2 custom properties.
+   ======================================================================== */
+
+:root {
+  --bg-0: #0b1020;
+  --bg-1: #141b34;
+  --ink: #f4f7ff;
+  --ink-dim: #9aa6c7;
+  --line: rgba(255, 255, 255, 0.08);
+  --card: #1a2342;
+  --card-2: #222d52;
+  --gold: #ffd166;
+  --accent: #ff6b35;
+
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 24px;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  --shadow-sm: 0 8px 20px rgba(0, 0, 0, 0.35);
+
+  --font-display: 'Anton', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: radial-gradient(120% 90% at 50% -10%, var(--bg-1), var(--bg-0) 60%);
+  /* Lock the whole app to the visible viewport (dvh tracks mobile browser UI),
+     so it sits on one screen with no page scroll on desktop or mobile. */
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Respect notches / home indicators on iOS & Android (viewport-fit=cover). */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* --- Court backdrop ------------------------------------------------------- */
+.court {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(60% 50% at 50% 0%, rgba(255, 107, 53, 0.12), transparent 70%),
+    radial-gradient(50% 40% at 100% 100%, rgba(123, 47, 247, 0.14), transparent 70%),
+    radial-gradient(50% 40% at 0% 90%, rgba(76, 201, 240, 0.1), transparent 70%);
+  pointer-events: none;
+}
+.court::after {
+  /* faint center-circle / key markings */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 50% 18%, transparent 78px, rgba(255, 255, 255, 0.05) 79px, transparent 81px),
+    linear-gradient(transparent 17%, rgba(255, 255, 255, 0.04) 17.2%, transparent 17.4%);
+  opacity: 0.5;
+}
+
+/* --- Chrome --------------------------------------------------------------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
+  flex-shrink: 0;
+}
+.topbar__brand {
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  font-size: 0.82rem;
+  color: var(--ink-dim);
+}
+.iconbtn {
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.iconbtn:hover {
+  background: var(--card-2);
+  transform: scale(1.06);
+}
+.iconbtn:active {
+  transform: scale(0.94);
+}
+
+.app {
+  flex: 1;
+  min-height: 0; /* let screens shrink to fit instead of forcing page growth */
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 6px max(16px, env(safe-area-inset-left)) 10px max(16px, env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+}
+.footer {
+  text-align: center;
+  color: var(--ink-dim);
+  font-size: 0.7rem;
+  padding: 4px 18px 6px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+/* The footer is decorative — drop it when vertical space is tight. */
+@media (max-height: 740px) {
+  .footer {
+    display: none;
+  }
+}
+
+.screen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  /* Safety net: a screen scrolls within itself rather than ever growing the
+     page. The game screens are sized to fit, so this only engages for the
+     settings list on very short windows. */
+  overflow-y: auto;
+  scrollbar-width: thin;
+  animation: rise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+/* --- Buttons -------------------------------------------------------------- */
+.btn {
+  font-family: var(--font-body);
+  font-weight: 800;
+  border: none;
+  border-radius: var(--r-md);
+  padding: 14px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--ink);
+  transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+.btn:active {
+  transform: translateY(2px) scale(0.99);
+}
+.btn--primary {
+  background: linear-gradient(135deg, var(--accent), #ff3d7f);
+  box-shadow: 0 10px 24px rgba(255, 61, 127, 0.35);
+}
+.btn--primary:hover {
+  filter: brightness(1.07);
+}
+.btn--ghost {
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+.btn--ghost:hover {
+  background: var(--card-2);
+}
+.btn--block {
+  width: 100%;
+}
+.btn--danger {
+  background: linear-gradient(135deg, #ff5247, #c81e1e);
+  box-shadow: 0 10px 24px rgba(200, 30, 30, 0.32);
+}
+.btn--danger:hover {
+  filter: brightness(1.07);
+}
+.btn--xl {
+  padding: 18px 24px;
+  font-size: 1.15rem;
+  margin-top: auto;
+}
+.btn--lock {
+  background: linear-gradient(135deg, var(--gold), #ff9e00);
+  color: #20160a;
+  font-size: 1.2rem;
+  letter-spacing: 0.04em;
+  padding: 18px;
+  margin: 16px 0 10px;
+  box-shadow: 0 12px 26px rgba(255, 158, 0, 0.35);
+}
+.btn--lock:disabled {
+  filter: grayscale(0.3) brightness(0.9);
+  cursor: default;
+}
+.btn--lock-active {
+  animation: pop 0.3s ease;
+}
+@keyframes pop {
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* --- Intro ---------------------------------------------------------------- */
+.intro {
+  text-align: center;
+  gap: 14px;
+}
+.intro__badge {
+  align-self: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--gold);
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  padding: 6px 14px;
+  border-radius: 999px;
+  margin-top: 8px;
+}
+.title {
+  font-family: var(--font-display);
+  line-height: 0.92;
+  letter-spacing: 0.01em;
+  margin-top: 6px;
+}
+.title__line1 {
+  display: block;
+  font-size: 2.4rem;
+  color: var(--ink);
+}
+.title__goat {
+  display: block;
+  font-size: 4.6rem;
+  background: linear-gradient(135deg, var(--gold), var(--accent) 60%, #ff3d7f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 6px 18px rgba(255, 107, 53, 0.35));
+}
+.subtitle {
+  color: var(--ink-dim);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  max-width: 30ch;
+  margin: 4px auto 0;
+}
+.how {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+  display: grid;
+  gap: 10px;
+  text-align: left;
+}
+.how__item {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 14px;
+}
+.how__icon {
+  font-size: 1.7rem;
+  flex-shrink: 0;
+}
+.how__title {
+  font-weight: 800;
+  font-size: 0.98rem;
+}
+.how__desc {
+  color: var(--ink-dim);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+/* --- Play: progress + banner --------------------------------------------- */
+.progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.progress__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.play__pause {
+  width: 36px;
+  height: 36px;
+  font-size: 0.9rem;
+}
+.progress__label {
+  font-weight: 800;
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+  letter-spacing: 0.04em;
+}
+.progress__dots {
+  display: flex;
+  gap: 7px;
+}
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--line);
+  transition: all 0.3s ease;
+}
+.dot--done {
+  background: var(--gold);
+}
+.dot--active {
+  background: var(--accent);
+  transform: scale(1.35);
+  box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.2);
+}
+
+.cat-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, var(--card)), var(--card));
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+}
+.cat-banner__icon {
+  font-size: 2rem;
+}
+.cat-banner__label {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.cat-banner__tag {
+  color: var(--ink-dim);
+  font-size: 0.82rem;
+  margin-top: 2px;
+}
+
+/* --- Reel + card ---------------------------------------------------------- */
+.reel-stage {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 22vh;
+  padding: 10px 0;
+  /* A clipped slot window: cards slide within it and are masked at the edges,
+     so the motion can never paint over the LOCK IN button below. */
+  overflow: hidden;
+  /* The reel is purely visual — never let a moving card intercept a tap meant
+     for the lock button. */
+  pointer-events: none;
+}
+/* Stack every reel card in the same grid cell so they cross-fade in place. */
+.reel-stage > .card {
+  grid-area: 1 / 1;
+}
+.card {
+  position: relative;
+  width: 230px;
+  background: linear-gradient(180deg, var(--card-2), var(--card));
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 18px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transform-style: preserve-3d;
+}
+/* Cross-slide conveyor: the incoming card slides in from the right while the
+   outgoing one slides off to the left, so faces flow past smoothly instead of
+   popping in. --rd (set per reel speed in reel.js) keeps motion in step with
+   the cadence. Only transform + opacity animate (both GPU-composited) so the
+   motion stays buttery at the display's refresh rate — no per-frame blur. */
+.reel-card {
+  will-change: transform, opacity;
+}
+.reel-card--in,
+.reel-card--out {
+  /* Symmetric ease so both cards travel at a matched pace through the crossover
+     — the incoming and outgoing read as one continuous, flowing strip. */
+  animation-duration: var(--rd, 0.22s);
+  animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
+  animation-fill-mode: both;
+}
+.reel-card--in {
+  animation-name: reel-in;
+}
+.reel-card--out {
+  animation-name: reel-out;
+}
+/* Horizontal carousel: the next player slides in from the right while the last
+   one slides off to the left, so mid-transition you see them flanking centre. */
+@keyframes reel-in {
+  from {
+    transform: translateX(58%) scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes reel-out {
+  from {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-58%) scale(0.94);
+    opacity: 0;
+  }
+}
+.card--locked {
+  animation: lockIn 0.5s cubic-bezier(0.2, 1.5, 0.35, 1) both;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.4), var(--shadow);
+}
+@keyframes lockIn {
+  0% {
+    transform: scale(1.08) rotate(-2deg);
+  }
+  55% {
+    transform: scale(0.97) rotate(1.2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+/* A quick light sweep across the card the instant it locks in. */
+.card--locked::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%);
+  background-size: 250% 100%;
+  animation: lock-sweep 0.55s ease-out 1;
+}
+@keyframes lock-sweep {
+  from {
+    background-position: 140% 0;
+  }
+  to {
+    background-position: -60% 0;
+  }
+}
+
+.jersey {
+  width: 150px;
+  height: 150px;
+  border-radius: 18px;
+  background: linear-gradient(150deg, var(--c1), color-mix(in srgb, var(--c2) 65%, var(--c1)));
+  display: grid;
+  place-items: center;
+  position: relative;
+  box-shadow: inset 0 -8px 24px rgba(0, 0, 0, 0.3), var(--shadow-sm);
+  overflow: hidden;
+}
+.jersey::before {
+  /* shine sweep, sits above the photo for a glossy trading-card look */
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.22) 50%, transparent 60%);
+}
+.jersey__monogram {
+  /* Only rendered in 'jerseys' card-art mode (see playerCard.js); photo mode
+     never creates it, so loaded cards have no letters behind the face. */
+  font-family: var(--font-display);
+  font-size: 3.6rem;
+  color: #fff;
+  text-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+  letter-spacing: 0.02em;
+}
+.jersey__photo {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  /* subtle bottom fade so the cutout blends into the colored panel */
+  -webkit-mask-image: linear-gradient(180deg, #000 78%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 78%, transparent 100%);
+}
+.jersey__photo.is-loaded {
+  opacity: 1;
+}
+.jersey__number {
+  position: absolute;
+  z-index: 3;
+  bottom: 8px;
+  right: 12px;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+.card__meta {
+  text-align: center;
+  min-width: 0;
+  max-width: 100%;
+}
+.card__name {
+  font-weight: 800;
+  font-size: 1.1rem;
+  line-height: 1.15;
+}
+.card__sub {
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+  margin-top: 3px;
+}
+.card__stat {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+}
+.card__stat-label {
+  font-size: 0.82rem;
+  color: var(--ink-dim);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card__stat-value {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+}
+.rating--elite .card__stat-value {
+  color: #ffd166;
+}
+.rating--great .card__stat-value {
+  color: #4cc9f0;
+}
+.rating--good .card__stat-value {
+  color: #06d6a0;
+}
+.rating--ok .card__stat-value {
+  color: var(--ink-dim);
+}
+
+/* --- Slot tray ------------------------------------------------------------ */
+.tray {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.slot {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 8px 4px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+.slot--filled {
+  border-color: rgba(255, 209, 102, 0.5);
+  background: linear-gradient(180deg, rgba(255, 209, 102, 0.12), var(--card));
+}
+.slot--active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.25);
+}
+.slot__icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+.slot__who {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--ink-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.slot--filled .slot__who {
+  color: var(--gold);
+}
+
+/* --- Result --------------------------------------------------------------- */
+.result {
+  gap: 16px;
+  text-align: center;
+}
+.result__head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  justify-content: center;
+  margin-top: 6px;
+}
+.overall {
+  --pct: 0;
+  width: 116px;
+  height: 116px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: conic-gradient(var(--gold) calc(var(--pct) * 1%), rgba(255, 255, 255, 0.08) 0);
+  position: relative;
+  animation: spinIn 0.9s ease both;
+}
+@keyframes spinIn {
+  from {
+    transform: rotate(-120deg) scale(0.7);
+    opacity: 0;
+  }
+}
+.overall::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: var(--bg-1);
+}
+.overall__num {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 2.8rem;
+  line-height: 1;
+}
+.overall__cap {
+  position: relative;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  color: var(--ink-dim);
+}
+.tier {
+  text-align: left;
+}
+.tier__name {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 1.05;
+}
+.tier__blurb {
+  color: var(--ink-dim);
+  font-size: 0.82rem;
+  margin-top: 4px;
+  max-width: 18ch;
+}
+.breakdown {
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.badge {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.lineup__heading {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-dim);
+  margin-top: 4px;
+}
+.lineup {
+  /* 3 columns × 2 rows keeps the reveal short enough to fit on one screen. */
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.card--compact {
+  width: 100%;
+  /* min-width:0 lets the card shrink to its 1fr grid track instead of being
+     widened by a long nowrap name's min-content (which overflowed the row). */
+  min-width: 0;
+  padding: 9px 6px;
+  gap: 6px;
+}
+.card--compact .jersey {
+  width: clamp(46px, 15vw, 74px);
+  height: clamp(46px, 15vw, 74px);
+  border-radius: 12px;
+}
+.card--compact .jersey__monogram {
+  font-size: 1.8rem;
+}
+.card--compact .jersey__number {
+  bottom: 4px;
+  right: 6px;
+  font-size: 0.8rem;
+}
+.card--compact .card__name {
+  font-size: 0.82rem;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card--compact .card__sub {
+  font-size: 0.68rem;
+  margin-top: 1px;
+}
+.card--compact .card__stat {
+  padding: 5px 8px;
+}
+.card--compact .card__stat-label {
+  font-size: 0.66rem;
+}
+.card--compact .card__stat-value {
+  font-size: 1.1rem;
+}
+.result__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* --- Settings ------------------------------------------------------------- */
+.settings {
+  gap: 14px;
+  text-align: left;
+}
+.settings__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+.settings__back {
+  flex-shrink: 0;
+  font-size: 1.3rem;
+}
+.settings__title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  letter-spacing: 0.02em;
+}
+.settings__section-title {
+  font-weight: 800;
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin: 8px 0 8px 4px;
+}
+.settings__card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 2px 14px;
+}
+.srow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.srow:last-child {
+  border-bottom: none;
+}
+.srow--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.srow__text {
+  min-width: 0;
+}
+.srow__label {
+  font-weight: 700;
+  font-size: 0.98rem;
+}
+.srow__desc {
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+.srow__slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.srow__slider .slider {
+  flex: 1;
+}
+.srow__value {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--gold);
+  min-width: 3.5ch;
+  text-align: right;
+}
+
+/* toggle switch */
+.switch {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.switch__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.switch__track {
+  width: 50px;
+  height: 30px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.13);
+  display: flex;
+  align-items: center;
+  transition: background 0.2s ease;
+}
+.switch__thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  transition: transform 0.2s ease;
+}
+.switch__input:checked + .switch__track {
+  background: linear-gradient(135deg, var(--accent), #ff3d7f);
+}
+.switch__input:checked + .switch__track .switch__thumb {
+  transform: translateX(20px);
+}
+.switch__input:focus-visible + .switch__track {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* range slider */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  outline: none;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: none;
+  cursor: pointer;
+}
+
+/* segmented control */
+.segmented {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-sm);
+  background: rgba(0, 0, 0, 0.28);
+}
+.segmented__btn {
+  border: none;
+  background: transparent;
+  color: var(--ink-dim);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 7px 13px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.segmented__btn:hover {
+  color: var(--ink);
+}
+.segmented__btn.is-active {
+  background: linear-gradient(135deg, var(--accent), #ff3d7f);
+  color: #fff;
+}
+.settings__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* When the spin FX setting is off, cards swap instantly (reel.js skips the
+   cross-slide and renders a single static card per tick). */
+.no-spin-fx .reel-card--in,
+.no-spin-fx .reel-card--out {
+  animation: none;
+}
+
+/* --- Pause overlay -------------------------------------------------------- */
+.pause {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(7, 10, 20, 0.72);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  overflow-y: auto;
+  animation: pause-fade 0.2s ease both;
+}
+@keyframes pause-fade {
+  from {
+    opacity: 0;
+  }
+}
+.pause__panel {
+  width: 100%;
+  max-width: 340px;
+  margin: auto;
+}
+.pause__panel--wide {
+  max-width: 440px;
+}
+.pause__card {
+  background: linear-gradient(180deg, var(--card-2), var(--card));
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 24px 20px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: pause-pop 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@keyframes pause-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+}
+.pause__title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+}
+.pause__icon {
+  color: var(--gold);
+}
+.pause__quit {
+  color: #ff9b8a;
+}
+.pause__heading {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  text-align: center;
+}
+.pause__msg {
+  color: var(--ink-dim);
+  text-align: center;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+.pause__confirm {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+/* Settings rendered inside the pause overlay shouldn't add its own outer
+   animation/spacing on top of the card-less panel. */
+.pause__panel .screen.settings {
+  animation: none;
+}
+
+/* --- Motion preferences --------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* --- Viewport fit: scale down so every screen fits without scrolling ------
+   Height-based breakpoints compact the tall screens (intro / result / settings)
+   for laptops and shorter phones; the game flow then sits fully in view. */
+@media (max-height: 800px) {
+  .title__line1 {
+    font-size: 2rem;
+  }
+  .title__goat {
+    font-size: 3.8rem;
+  }
+  .intro {
+    gap: 10px;
+  }
+  .how {
+    gap: 8px;
+  }
+  .how__item {
+    padding: 10px 12px;
+  }
+  .result {
+    gap: 10px;
+  }
+  .lineup {
+    gap: 7px;
+  }
+  .overall {
+    width: 104px;
+    height: 104px;
+  }
+  .overall__num {
+    font-size: 2.4rem;
+  }
+  /* tighten the settings list so it fits (or barely scrolls) on laptops */
+  .settings {
+    gap: 10px;
+  }
+  .srow {
+    padding: 11px 0;
+  }
+  .settings__section-title {
+    margin: 4px 0 6px 4px;
+  }
+}
+@media (max-height: 660px) {
+  .title {
+    margin-top: 0;
+  }
+  .title__line1 {
+    font-size: 1.6rem;
+  }
+  .title__goat {
+    font-size: 2.9rem;
+  }
+  .subtitle {
+    font-size: 0.84rem;
+    margin-top: 0;
+  }
+  .how {
+    gap: 6px;
+  }
+  .how__item {
+    padding: 8px 11px;
+  }
+  .how__icon {
+    font-size: 1.3rem;
+  }
+  .intro__badge {
+    margin-top: 2px;
+  }
+  /* Main reel card shrinks so the play screen never overflows. */
+  .card {
+    padding: 12px;
+    gap: 8px;
+  }
+  .jersey {
+    width: 116px;
+    height: 116px;
+  }
+  .jersey__monogram {
+    font-size: 2.8rem;
+  }
+  .card__name {
+    font-size: 1rem;
+  }
+  .cat-banner {
+    padding: 10px 14px;
+  }
+  .cat-banner__label {
+    font-size: 1.35rem;
+  }
+  .btn--lock {
+    padding: 14px;
+    font-size: 1.05rem;
+    margin: 10px 0 8px;
+  }
+  .card--compact {
+    padding: 7px 5px;
+  }
+  .srow {
+    padding: 9px 0;
+  }
+  .srow--stack {
+    gap: 6px;
+  }
+  .settings__title {
+    font-size: 1.7rem;
+  }
+  .overall {
+    width: 92px;
+    height: 92px;
+  }
+  .overall__num {
+    font-size: 2.1rem;
+  }
+  .tier__name {
+    font-size: 1.25rem;
+  }
+}
+
+/* Slightly larger title on tall screens that can afford it. */
+@media (min-height: 860px) {
+  .title__goat {
+    font-size: 5rem;
+  }
+}
