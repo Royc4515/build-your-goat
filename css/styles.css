@@ -114,6 +114,9 @@ body {
   padding: 6px max(16px, env(safe-area-inset-left)) 10px max(16px, env(safe-area-inset-right));
   display: flex;
   flex-direction: column;
+  /* Centre content screens vertically when there's spare height; the play
+     screen is flex:1 and fills regardless. */
+  justify-content: center;
 }
 .footer {
   text-align: center;
@@ -135,17 +138,15 @@ body {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  /* Safety net: a screen scrolls within itself rather than ever growing the
-     page. The game screens are sized to fit, so this only engages for the
-     settings list on very short windows. */
-  overflow-y: auto;
-  scrollbar-width: thin;
-  animation: rise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  /* Screens are auto-scaled to fit by js/ui/fit.js, so they never need to
+     scroll. The scale is applied as an inline transform at runtime — so the
+     entrance animation must NOT touch `transform` (a CSS animation overrides
+     inline styles and would clobber the fit scale); fade opacity only. */
+  animation: rise 0.4s ease both;
 }
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(14px);
   }
 }
 

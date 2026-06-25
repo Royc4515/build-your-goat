@@ -9,6 +9,7 @@ import { mountPlayRound, mountReveal } from './ui/playScreen.js';
 import { mountPauseMenu } from './ui/pauseMenu.js';
 import { createInitialState, startGame, lockPick, advanceAfterReveal, reset, openSettings } from './core/state.js';
 import { toggleMute, music, applyAudioSettings } from './ui/sound.js';
+import { fitScreen } from './ui/fit.js';
 import { preloadHeadshots } from './data/players.js';
 import { getSettings, onSettingsChange } from './core/settings.js';
 
@@ -91,6 +92,14 @@ function resumeGame() {
   }
   paused = false;
   mountPlaying();
+  fitActiveScreen();
+}
+
+/** Scale the freshly-rendered content screen to fit the viewport (no scroll).
+ *  The play screen is excluded — it already fills the height via flexbox. */
+function fitActiveScreen() {
+  const screen = root.querySelector('.screen');
+  fitScreen(screen && !screen.classList.contains('play') ? screen : null);
 }
 
 function render() {
@@ -120,6 +129,7 @@ function render() {
     default:
       throw new Error(`Unknown phase: ${state.phase}`);
   }
+  fitActiveScreen();
 }
 
 function wireMuteButton() {
