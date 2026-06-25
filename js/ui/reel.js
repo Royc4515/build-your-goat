@@ -1,7 +1,7 @@
-// The slot-machine reel: cycles player cards for the current category with a
-// smooth cross-slide (one card rises into the centre as the last slides up and
-// out). "Lock In" decelerates and snaps to a pick, like the TikTok GOAT filter.
-// One reel is alive per round; call destroy() before the next to avoid leaks.
+// The reel: cycles player cards for the current category with a smooth
+// cross-slide (one card slides in as the last slides out). "Lock In" captures
+// the player shown at the exact moment you press — so winning is about timing,
+// not luck. One reel is alive per round; call destroy() before the next.
 
 import { clear } from './dom.js';
 import { playerCard } from './playerCard.js';
@@ -11,12 +11,9 @@ import { getSetting } from '../core/settings.js';
 
 // Base cadence (ms) between faces, by user-chosen reel speed. Tuned on the slow
 // side so each transition spans several frames and reads as smooth, continuous
-// motion at the display's refresh rate rather than a strobe.
+// motion at the display's refresh rate rather than a strobe. The cadence is also
+// the player's reaction window — slower = easier to nail a target, faster = harder.
 const SPIN_MS_BY_SPEED = { chill: 340, normal: 240, hyper: 150 };
-
-// Deceleration tail as multipliers of the base cadence — always slower than the
-// spin and increasing, so the reel eases to a stop regardless of chosen speed.
-const DECEL_FACTORS = [1.3, 1.7, 2.3, 3.2, 4.4, 6.2];
 
 /**
  * @param {Object} cfg
@@ -35,7 +32,6 @@ export function createReel({ mount, category, pool, onSettled }) {
   let index = 0;
   let current = null;
   let spinTimer = null;
-  let decelTimers = [];
   let exitTimers = [];
   let locking = false;
   let destroyed = false;
@@ -86,36 +82,15 @@ export function createReel({ mount, category, pool, onSettled }) {
     locking = true;
     window.clearTimeout(spinTimer);
     spinTimer = null;
-
-    // Walk the deceleration tail, then settle on whatever lands last.
-    let step = 0;
-    const tick = () => {
-      if (destroyed) return;
-      if (step >= DECEL_FACTORS.length) {
-        const finalPlayer = order[index];
-        if (current) {
-          current.classList.remove('reel-card--in', 'reel-card--out');
-          current.classList.add('card--locked');
-        }
-        sfx.lock();
-        onSettled(finalPlayer);
-        return;
-      }
-      advance();
-      sfx.tick();
-      const delay = Math.round(spinMs * DECEL_FACTORS[step]);
-      decelTimers.push(window.setTimeout(tick, delay));
-      step += 1;
-    };
-    tick();
+    // Freeze on exactly the face on screen right now — no deceleration past it.
+    sfx.lock();
+    onSettled(order[index]);
   }
 
   function destroy() {
     destroyed = true;
     if (spinTimer) window.clearTimeout(spinTimer);
-    decelTimers.forEach((t) => window.clearTimeout(t));
     exitTimers.forEach((t) => window.clearTimeout(t));
-    decelTimers = [];
     exitTimers = [];
   }
 

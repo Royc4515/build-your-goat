@@ -11,16 +11,19 @@ import { CATEGORIES, TOTAL_ROUNDS } from '../data/categories.js';
  * @property {Phase} phase
  * @property {number} round                 Index into CATEGORIES (0-based).
  * @property {Readonly<Record<string,string>>} picks  categoryId -> playerId.
+ * @property {Readonly<{categoryId:string,playerId:string}>|null} reveal
+ *   When set, a pick was just locked and is being shown before advancing. The
+ *   pick is already recorded in `picks`, so a pause/resume never loses it.
  */
 
 /** @returns {GameState} */
 export function createInitialState() {
-  return Object.freeze({ phase: 'intro', round: 0, picks: Object.freeze({}) });
+  return Object.freeze({ phase: 'intro', round: 0, picks: Object.freeze({}), reveal: null });
 }
 
 /** Begin a fresh playthrough from the intro screen. */
 export function startGame() {
-  return Object.freeze({ phase: 'playing', round: 0, picks: Object.freeze({}) });
+  return Object.freeze({ phase: 'playing', round: 0, picks: Object.freeze({}), reveal: null });
 }
 
 /** The category for the current round, or null once the build is done. */
@@ -29,28 +32,42 @@ export function currentCategory(state) {
 }
 
 /**
- * Lock the chosen player into the current category and advance.
- * Advancing past the final round flips the phase to 'result'.
+ * Lock the chosen player into the current category. The round does NOT advance
+ * yet — `reveal` is set so the pick can be shown; advanceAfterReveal() moves on.
  * @returns {GameState}
  */
 export function lockPick(state, playerId) {
   const category = currentCategory(state);
-  if (!category) return state; // nothing to lock; ignore stray calls
+  if (!category || state.reveal) return state; // nothing to lock / already revealing
 
   const picks = Object.freeze({ ...state.picks, [category.id]: playerId });
+  return Object.freeze({
+    phase: 'playing',
+    round: state.round,
+    picks,
+    reveal: Object.freeze({ categoryId: category.id, playerId }),
+  });
+}
+
+/**
+ * Finish the reveal and move to the next round (or to the result once done).
+ * @returns {GameState}
+ */
+export function advanceAfterReveal(state) {
+  if (!state.reveal) return state;
   const nextRound = state.round + 1;
   const done = nextRound >= TOTAL_ROUNDS;
-
   return Object.freeze({
     phase: done ? 'result' : 'playing',
     round: nextRound,
-    picks,
+    picks: state.picks,
+    reveal: null,
   });
 }
 
 /** Open the settings screen (reachable from the title screen). */
 export function openSettings() {
-  return Object.freeze({ phase: 'settings', round: 0, picks: Object.freeze({}) });
+  return Object.freeze({ phase: 'settings', round: 0, picks: Object.freeze({}), reveal: null });
 }
 
 /** Back to the title screen. */

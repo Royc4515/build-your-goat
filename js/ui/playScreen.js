@@ -1,18 +1,22 @@
-// Renders one play round: the category banner, the spinning reel, the LOCK IN
-// button, and the tray of slots filled so far. Owns the reel's lifecycle and
-// returns a cleanup function the caller MUST run before the next round.
+// Renders the two states of an active round:
+//   mountPlayRound — the spinning reel + LOCK IN. Pressing lock captures the
+//     face on screen at that instant (skill, not luck) and commits it.
+//   mountReveal    — shows the just-locked pick for a beat before advancing.
+// Both carry a pause button that works at all times. Each returns a cleanup
+// function the caller MUST run before mounting the next view.
 
 import { el, clear } from './dom.js';
 import { CATEGORIES, TOTAL_ROUNDS } from '../data/categories.js';
 import { PLAYERS, PLAYERS_BY_ID } from '../data/players.js';
 import { currentCategory } from '../core/state.js';
 import { createReel } from './reel.js';
+import { playerCard } from './playerCard.js';
 import { sfx } from './sound.js';
 
-const REVEAL_HOLD_MS = 800; // pause on the locked card before advancing
+const REVEAL_MS = 1100; // how long the locked pick is shown before auto-advancing
 
 /**
- * Mount the current round.
+ * Mount the spinning round.
  * @param {HTMLElement} root
  * @param {import('../core/state.js').GameState} state
  * @param {{ onLocked:(playerId:string)=>void, onPause:()=>void }} handlers
@@ -22,21 +26,13 @@ export function mountPlayRound(root, state, { onLocked, onPause }) {
   clear(root);
   const category = currentCategory(state);
   const stage = el('div', { class: 'reel-stage' });
+  const pauseBtn = makePauseBtn(onPause);
 
   const lockBtn = el('button', {
     class: 'btn btn--lock',
     text: '🔒  LOCK IN',
     attrs: { type: 'button' },
   });
-
-  const pauseBtn = el('button', {
-    class: 'iconbtn play__pause',
-    text: '⏸',
-    attrs: { type: 'button', 'aria-label': 'Pause' },
-  });
-
-  let locking = false; // true once a pick is being locked in (no pausing then)
-  let revealTimer = null;
 
   const screen = el('section', {
     class: 'screen play',
@@ -55,54 +51,115 @@ export function mountPlayRound(root, state, { onLocked, onPause }) {
     mount: stage,
     category,
     pool: PLAYERS,
-    onSettled: (player) => {
-      // Reel has snapped; hold on the reveal, then advance the game.
-      lockBtn.disabled = true;
-      lockBtn.textContent = `✅  ${player.short}`;
-      let advanced = false;
-      const advance = () => {
-        if (advanced) return;
-        advanced = true;
-        onLocked(player.id);
-      };
-      revealTimer = window.setTimeout(advance, REVEAL_HOLD_MS);
-    },
+    // Captured at press time; commit straight away. The reveal STATE shows it,
+    // so a pause can never lose an earned pick.
+    onSettled: (player) => onLocked(player.id),
   });
 
   const onLockClick = () => {
     if (reel.isLocking()) return;
-    sfx.click();
-    locking = true;
-    pauseBtn.disabled = true; // committing to a pick — don't allow pausing mid-lock
-    lockBtn.classList.add('btn--lock-active');
-    reel.lock();
+    reel.lock(); // captures the current face and fires onSettled synchronously
   };
   lockBtn.addEventListener('click', onLockClick);
 
-  const requestPause = () => {
-    if (locking) return;
-    sfx.click();
-    onPause();
-  };
-  pauseBtn.addEventListener('click', requestPause);
-
-  // Spacebar / Enter locks; Escape pauses.
+  // Spacebar / Enter locks; Escape pauses (pause is allowed at any time).
   const onKey = (e) => {
     if (e.code === 'Space' || e.code === 'Enter') {
       e.preventDefault();
       onLockClick();
     } else if (e.code === 'Escape') {
       e.preventDefault();
-      requestPause();
+      onPause();
     }
   };
   window.addEventListener('keydown', onKey);
 
   return () => {
     reel.destroy();
-    if (revealTimer) window.clearTimeout(revealTimer);
     window.removeEventListener('keydown', onKey);
   };
+}
+
+/**
+ * Mount the reveal of a just-locked pick (state.reveal must be set).
+ * @param {HTMLElement} root
+ * @param {import('../core/state.js').GameState} state
+ * @param {{ onAdvance:()=>void, onPause:()=>void }} handlers
+ * @returns {() => void}  cleanup
+ */
+export function mountReveal(root, state, { onAdvance, onPause }) {
+  clear(root);
+  const category = CATEGORIES[state.round];
+  const player = PLAYERS_BY_ID[state.reveal.playerId];
+  const pauseBtn = makePauseBtn(onPause);
+
+  const stage = el('div', { class: 'reel-stage' });
+  const card = playerCard(player, { category });
+  card.classList.add('card--locked');
+  stage.append(card);
+
+  const continueBtn = el('button', {
+    class: 'btn btn--lock',
+    text: `✅  Locked: ${player.short}`,
+    attrs: { type: 'button' },
+  });
+
+  const screen = el('section', {
+    class: 'screen play',
+    style: { '--accent': category.accent },
+    children: [
+      progressBar(state.round, pauseBtn),
+      categoryBanner(category),
+      stage,
+      continueBtn,
+      slotTray(state.picks, state.round),
+    ],
+  });
+  root.append(screen);
+
+  let advanced = false;
+  const advance = () => {
+    if (advanced) return;
+    advanced = true;
+    onAdvance();
+  };
+  const timer = window.setTimeout(advance, REVEAL_MS);
+
+  continueBtn.addEventListener('click', () => {
+    sfx.click();
+    advance();
+  });
+
+  const onKey = (e) => {
+    if (e.code === 'Escape') {
+      e.preventDefault();
+      onPause();
+    } else if (e.code === 'Space' || e.code === 'Enter') {
+      e.preventDefault();
+      advance();
+    }
+  };
+  window.addEventListener('keydown', onKey);
+
+  return () => {
+    window.clearTimeout(timer);
+    window.removeEventListener('keydown', onKey);
+  };
+}
+
+// --- shared building blocks ------------------------------------------------
+
+function makePauseBtn(onPause) {
+  const btn = el('button', {
+    class: 'iconbtn play__pause',
+    text: '⏸',
+    attrs: { type: 'button', 'aria-label': 'Pause' },
+  });
+  btn.addEventListener('click', () => {
+    sfx.click();
+    onPause();
+  });
+  return btn;
 }
 
 function progressBar(round, pauseBtn) {

@@ -5,9 +5,9 @@
 import { byId } from './ui/dom.js';
 import { renderIntro, renderResult } from './ui/screens.js';
 import { renderSettings } from './ui/settingsScreen.js';
-import { mountPlayRound } from './ui/playScreen.js';
+import { mountPlayRound, mountReveal } from './ui/playScreen.js';
 import { mountPauseMenu } from './ui/pauseMenu.js';
-import { createInitialState, startGame, lockPick, reset, openSettings } from './core/state.js';
+import { createInitialState, startGame, lockPick, advanceAfterReveal, reset, openSettings } from './core/state.js';
 import { toggleMute, music, applyAudioSettings } from './ui/sound.js';
 import { preloadHeadshots } from './data/players.js';
 import { getSettings, onSettingsChange } from './core/settings.js';
@@ -45,12 +45,20 @@ function setState(next) {
   render();
 }
 
-/** Mount (or re-mount) the current round with a fresh reel. */
-function mountCurrentRound() {
-  teardownRound = mountPlayRound(root, state, {
-    onLocked: (playerId) => setState(lockPick(state, playerId)),
-    onPause: pauseGame,
-  });
+/** Mount the right play view for the current state: the reveal of a just-locked
+ *  pick, or a fresh spinning round. Used by both render() and resume(). */
+function mountPlaying() {
+  if (state.reveal) {
+    teardownRound = mountReveal(root, state, {
+      onAdvance: () => setState(advanceAfterReveal(state)),
+      onPause: pauseGame,
+    });
+  } else {
+    teardownRound = mountPlayRound(root, state, {
+      onLocked: (playerId) => setState(lockPick(state, playerId)),
+      onPause: pauseGame,
+    });
+  }
 }
 
 /** Freeze the round and open the pause overlay. */
@@ -82,7 +90,7 @@ function resumeGame() {
     teardownPause = null;
   }
   paused = false;
-  mountCurrentRound();
+  mountPlaying();
 }
 
 function render() {
@@ -101,7 +109,7 @@ function render() {
       renderSettings(root, { onBack: () => setState(reset()) });
       break;
     case 'playing':
-      mountCurrentRound();
+      mountPlaying();
       break;
     case 'result':
       renderResult(root, {
