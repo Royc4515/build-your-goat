@@ -1,5 +1,7 @@
 # Build Your GOAT 🐐 — NBA Edition
 
+**▶ Play now: https://royc4515.github.io/build-your-goat/** (works on desktop & mobile)
+
 A casual, TikTok-filter-style basketball game. Spin a slot reel of NBA legends,
 **lock one player into each of six skill slots**, and reveal the highest-rated
 "GOAT" you can assemble. Chase the perfect **99 OVR**.
