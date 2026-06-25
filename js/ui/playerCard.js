@@ -26,12 +26,13 @@ export function playerCard(player, opts = {}) {
   const { category, compact = false } = opts;
   const [primary, secondary] = player.colors;
 
-  // Two card-art modes (a user setting):
-  //  - 'photos'  : real NBA headshot, NO monogram letters at all. If the photo
-  //                ever fails, the bare team-colored panel + number remain.
-  //  - 'jerseys' : CSS jersey art with the player's monogram letters (the photo
-  //                is intentionally not shown).
-  const useJerseys = getSetting('cardArt') === 'jerseys';
+  // Card art:
+  //  - Photo: real headshot, NO monogram letters. Only players with an `nbaId`
+  //    (NBA modes) have a photo source; soccer/EuroLeague players have none and
+  //    always use the jersey art below.
+  //  - Jersey art: CSS panel with the player's monogram letters. Used for the
+  //    'jerseys' setting, and for every player without a photo id.
+  const useJerseys = getSetting('cardArt') === 'jerseys' || !player.nbaId;
   const number = el('span', { class: 'jersey__number', text: `#${player.number}` });
   const jerseyChildren = [number];
 

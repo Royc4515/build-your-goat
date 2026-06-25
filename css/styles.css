@@ -496,12 +496,14 @@ body {
   background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.22) 50%, transparent 60%);
 }
 .jersey__monogram {
-  /* Only rendered in 'jerseys' card-art mode (see playerCard.js); photo mode
-     never creates it, so loaded cards have no letters behind the face. */
+  /* Shown for jersey art (the 'jerseys' setting + every photo-less player, e.g.
+     soccer / EuroLeague). The dark outline keeps it readable on light kits
+     (white/gold panels) as well as dark ones. */
   font-family: var(--font-display);
   font-size: 3.6rem;
   color: #fff;
-  text-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+  -webkit-text-stroke: 1.5px rgba(0, 0, 0, 0.35);
+  text-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
   letter-spacing: 0.02em;
 }
 .jersey__photo {
@@ -749,6 +751,10 @@ body {
 .card--compact .card__sub {
   font-size: 0.68rem;
   margin-top: 1px;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .card--compact .card__stat {
   padding: 5px 8px;
@@ -764,6 +770,79 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   margin-top: 6px;
+}
+.result__mode {
+  align-self: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+}
+
+/* --- Mode select ---------------------------------------------------------- */
+.modes {
+  gap: 14px;
+  text-align: left;
+}
+.modes__section-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+  margin: 6px 0 8px 2px;
+}
+.modes__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.mode-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: linear-gradient(180deg, var(--card-2), var(--card));
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.2s ease;
+}
+.mode-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+.mode-card:active {
+  transform: translateY(2px) scale(0.99);
+}
+.mode-card__icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+.mode-card__label {
+  min-width: 0;
+  line-height: 1.2;
+}
+.mode-card__live {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #fff;
+  background: linear-gradient(135deg, #ff5247, #c81e1e);
+  border-radius: 999px;
+  padding: 2px 6px;
 }
 
 /* --- Settings ------------------------------------------------------------- */

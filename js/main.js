@@ -5,18 +5,21 @@
 import { byId } from './ui/dom.js';
 import { renderIntro, renderResult } from './ui/screens.js';
 import { renderSettings } from './ui/settingsScreen.js';
+import { renderModeSelect } from './ui/modeSelect.js';
 import { mountPlayRound, mountReveal } from './ui/playScreen.js';
 import { mountPauseMenu } from './ui/pauseMenu.js';
-import { createInitialState, startGame, lockPick, advanceAfterReveal, reset, openSettings } from './core/state.js';
+import {
+  createInitialState, openModeSelect, startGame, lockPick, advanceAfterReveal, reset, openSettings,
+} from './core/state.js';
 import { toggleMute, music, applyAudioSettings } from './ui/sound.js';
 import { fitScreen } from './ui/fit.js';
-import { preloadHeadshots } from './data/players.js';
+import { preloadModeHeadshots, DEFAULT_MODE } from './data/modes.js';
 import { getSettings, onSettingsChange } from './core/settings.js';
 
 const root = byId('app');
 
-// Warm the headshot cache up front so the fast reel never flashes blank cards.
-preloadHeadshots();
+// Warm the default mode's headshot cache so the first reel never flashes blank.
+preloadModeHeadshots(DEFAULT_MODE);
 
 /** Push the current settings into the engine (audio levels + motion class). */
 function applyEffects(settings) {
@@ -106,12 +109,22 @@ function render() {
   switch (state.phase) {
     case 'intro':
       renderIntro(root, {
+        // First user gesture — safe to kick off the background groove.
         onStart: () => {
-          // First user gesture — safe to kick off the background groove.
           music.start();
-          setState(startGame());
+          setState(openModeSelect());
         },
         onSettings: () => setState(openSettings()),
+      });
+      break;
+    case 'modeSelect':
+      renderModeSelect(root, {
+        onPick: (mode) => {
+          music.start();
+          preloadModeHeadshots(mode);
+          setState(startGame(mode));
+        },
+        onBack: () => setState(reset()),
       });
       break;
     case 'settings':
@@ -122,8 +135,10 @@ function render() {
       break;
     case 'result':
       renderResult(root, {
+        mode: state.mode,
         picks: state.picks,
-        onPlayAgain: () => setState(reset()),
+        onPlayAgain: () => setState(startGame(state.mode)),
+        onChangeMode: () => setState(openModeSelect()),
       });
       break;
     default:

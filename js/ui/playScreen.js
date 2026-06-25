@@ -2,13 +2,14 @@
 //   mountPlayRound — the spinning reel + LOCK IN. Pressing lock captures the
 //     face on screen at that instant (skill, not luck) and commits it.
 //   mountReveal    — shows the just-locked pick for a beat before advancing.
-// Both carry a pause button that works at all times. Each returns a cleanup
-// function the caller MUST run before mounting the next view.
+// Both carry a pause button that works at all times. Categories, roster and
+// player lookups all come from the active mode (state.mode), so the same screen
+// plays NBA / EuroLeague / Soccer. Each returns a cleanup function the caller
+// MUST run before mounting the next view.
 
 import { el, clear } from './dom.js';
-import { CATEGORIES, TOTAL_ROUNDS } from '../data/categories.js';
-import { PLAYERS, PLAYERS_BY_ID } from '../data/players.js';
 import { currentCategory } from '../core/state.js';
+import { categoriesForMode, rosterForMode, playerForMode } from '../data/modes.js';
 import { createReel } from './reel.js';
 import { playerCard } from './playerCard.js';
 import { sfx } from './sound.js';
@@ -38,11 +39,11 @@ export function mountPlayRound(root, state, { onLocked, onPause }) {
     class: 'screen play',
     style: { '--accent': category.accent },
     children: [
-      progressBar(state.round, pauseBtn),
+      progressBar(state, pauseBtn),
       categoryBanner(category),
       stage,
       lockBtn,
-      slotTray(state.picks, state.round),
+      slotTray(state),
     ],
   });
   root.append(screen);
@@ -50,7 +51,7 @@ export function mountPlayRound(root, state, { onLocked, onPause }) {
   const reel = createReel({
     mount: stage,
     category,
-    pool: PLAYERS,
+    pool: rosterForMode(state.mode),
     // Captured at press time; commit straight away. The reveal STATE shows it,
     // so a pause can never lose an earned pick.
     onSettled: (player) => onLocked(player.id),
@@ -89,8 +90,8 @@ export function mountPlayRound(root, state, { onLocked, onPause }) {
  */
 export function mountReveal(root, state, { onAdvance, onPause }) {
   clear(root);
-  const category = CATEGORIES[state.round];
-  const player = PLAYERS_BY_ID[state.reveal.playerId];
+  const category = categoriesForMode(state.mode)[state.round];
+  const player = playerForMode(state.mode, state.reveal.playerId);
   const pauseBtn = makePauseBtn(onPause);
 
   const stage = el('div', { class: 'reel-stage' });
@@ -108,11 +109,11 @@ export function mountReveal(root, state, { onAdvance, onPause }) {
     class: 'screen play',
     style: { '--accent': category.accent },
     children: [
-      progressBar(state.round, pauseBtn),
+      progressBar(state, pauseBtn),
       categoryBanner(category),
       stage,
       continueBtn,
-      slotTray(state.picks, state.round),
+      slotTray(state),
     ],
   });
   root.append(screen);
@@ -162,10 +163,11 @@ function makePauseBtn(onPause) {
   return btn;
 }
 
-function progressBar(round, pauseBtn) {
-  const dots = CATEGORIES.map((_, i) =>
+function progressBar(state, pauseBtn) {
+  const categories = categoriesForMode(state.mode);
+  const dots = categories.map((_, i) =>
     el('span', {
-      class: ['dot', i < round ? 'dot--done' : i === round ? 'dot--active' : 'dot--todo'],
+      class: ['dot', i < state.round ? 'dot--done' : i === state.round ? 'dot--active' : 'dot--todo'],
     })
   );
   return el('div', {
@@ -173,7 +175,10 @@ function progressBar(round, pauseBtn) {
     children: [
       el('div', {
         class: 'progress__left',
-        children: [pauseBtn, el('div', { class: 'progress__label', text: `Round ${round + 1} of ${TOTAL_ROUNDS}` })],
+        children: [
+          pauseBtn,
+          el('div', { class: 'progress__label', text: `Round ${state.round + 1} of ${categories.length}` }),
+        ],
       }),
       el('div', { class: 'progress__dots', children: dots }),
     ],
@@ -195,18 +200,19 @@ function categoryBanner(category) {
   });
 }
 
-function slotTray(picks, round) {
-  const slots = CATEGORIES.map((c, i) => {
-    const pickedId = picks[c.id];
+function slotTray(state) {
+  const categories = categoriesForMode(state.mode);
+  const slots = categories.map((c, i) => {
+    const pickedId = state.picks[c.id];
     const filled = Boolean(pickedId);
     return el('div', {
-      class: ['slot', filled ? 'slot--filled' : i === round ? 'slot--active' : 'slot--empty'],
+      class: ['slot', filled ? 'slot--filled' : i === state.round ? 'slot--active' : 'slot--empty'],
       attrs: { title: c.label },
       children: [
         el('span', { class: 'slot__icon', text: c.icon }),
         el('span', {
           class: 'slot__who',
-          text: filled ? PLAYERS_BY_ID[pickedId].short : '—',
+          text: filled ? playerForMode(state.mode, pickedId).short : '—',
         }),
       ],
     });

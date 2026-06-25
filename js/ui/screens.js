@@ -4,8 +4,7 @@
 
 import { el, clear } from './dom.js';
 import { playerCard } from './playerCard.js';
-import { PLAYERS_BY_ID } from '../data/players.js';
-import { CATEGORIES } from '../data/categories.js';
+import { MODES, categoriesForMode, playerForMode } from '../data/modes.js';
 import { scoreBuild } from '../core/rating.js';
 import { sfx } from './sound.js';
 
@@ -14,8 +13,8 @@ export function renderIntro(root, { onStart, onSettings }) {
   clear(root);
 
   const steps = [
-    ['🎰', 'Spin the reel', 'Faces fly by for each skill — Scoring, Defense, Clutch & more.'],
-    ['🔒', 'Lock your pick', 'Tap LOCK IN to freeze the player on screen into that slot.'],
+    ['🎮', 'Pick a mode', 'NBA, EuroLeague or Soccer — legends, current stars, or the World Cup.'],
+    ['🎰', 'Spin & lock', 'Faces fly by for each skill — tap LOCK on the one you want. Timing is everything.'],
     ['🐐', 'Reveal your GOAT', 'Six picks combine into one rating. Chase the perfect 99.'],
   ].map(([icon, title, desc]) =>
     el('li', {
@@ -48,7 +47,7 @@ export function renderIntro(root, { onStart, onSettings }) {
     el('section', {
       class: 'screen intro',
       children: [
-        el('div', { class: 'intro__badge', text: '🏀 NBA EDITION' }),
+        el('div', { class: 'intro__badge', text: '🏀 ⚽ MULTI-SPORT' }),
         el('h1', {
           class: 'title',
           children: [
@@ -66,9 +65,10 @@ export function renderIntro(root, { onStart, onSettings }) {
 }
 
 /** Final reveal screen. */
-export function renderResult(root, { picks, onPlayAgain }) {
+export function renderResult(root, { mode, picks, onPlayAgain, onChangeMode }) {
   clear(root);
-  const result = scoreBuild(picks);
+  const result = scoreBuild(picks, mode);
+  const categories = categoriesForMode(mode);
   sfx.reveal();
 
   const ring = el('div', {
@@ -88,6 +88,11 @@ export function renderResult(root, { picks, onPlayAgain }) {
     ],
   });
 
+  const modeChip = el('div', {
+    class: 'result__mode',
+    text: `${MODES[mode].icon} ${MODES[mode].label}`,
+  });
+
   const breakdown = el('div', {
     class: 'breakdown',
     text: `Base ${result.base}${result.chemistry > 0 ? `  +${result.chemistry} chemistry` : ''}`,
@@ -100,44 +105,53 @@ export function renderResult(root, { picks, onPlayAgain }) {
 
   const lineup = el('div', {
     class: 'lineup',
-    children: CATEGORIES.map((c) =>
-      playerCard(PLAYERS_BY_ID[picks[c.id]], { category: c, compact: true })
+    children: categories.map((c) =>
+      playerCard(playerForMode(mode, picks[c.id]), { category: c, compact: true })
     ),
   });
 
-  const again = el('button', { class: 'btn btn--primary', text: '🔁  Build Again' });
+  const again = el('button', { class: 'btn btn--primary', text: '🔁  Play Again' });
   again.addEventListener('click', () => {
     sfx.click();
     onPlayAgain();
   });
 
-  const share = el('button', { class: 'btn btn--ghost', text: '📋  Copy Result' });
-  share.addEventListener('click', () => copyResult(share, picks, result));
+  const change = el('button', { class: 'btn btn--ghost', text: '🎮  Change Mode' });
+  change.addEventListener('click', () => {
+    sfx.click();
+    onChangeMode();
+  });
+
+  const share = el('button', { class: 'btn btn--ghost btn--block', text: '📋  Copy Result' });
+  share.addEventListener('click', () => copyResult(share, mode, picks, result));
 
   root.append(
     el('section', {
       class: 'screen result',
       children: [
+        modeChip,
         el('div', { class: 'result__head', children: [ring, tier] }),
         breakdown,
         badges,
         el('h2', { class: 'lineup__heading', text: 'YOUR STARTING LINEUP' }),
         lineup,
-        el('div', { class: 'result__actions', children: [again, share] }),
+        el('div', { class: 'result__actions', children: [again, change] }),
+        share,
       ],
     })
   );
 }
 
 /** Copy a plain-text summary to the clipboard with graceful fallback. */
-function copyResult(button, picks, result) {
+function copyResult(button, mode, picks, result) {
   sfx.click();
   const lines = [
     `🐐 MY GOAT — ${result.overall} OVR (${result.tier.label})`,
-    ...CATEGORIES.map((c) => `${c.icon} ${c.label}: ${PLAYERS_BY_ID[picks[c.id]].name}`),
+    `${MODES[mode].icon} ${MODES[mode].label}`,
+    ...categoriesForMode(mode).map((c) => `${c.icon} ${c.label}: ${playerForMode(mode, picks[c.id]).name}`),
     ...(result.badges.length ? ['', result.badges.join('  ')] : []),
     '',
-    'Build yours: BUILD YOUR GOAT',
+    'Build yours: https://royc4515.github.io/build-your-goat/',
   ];
   const text = lines.join('\n');
 

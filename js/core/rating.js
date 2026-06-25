@@ -2,12 +2,11 @@
 // Given the picks (categoryId -> playerId) it computes the overall rating,
 // per-slot scores, chemistry bonus, tier and badges. No DOM, no side effects.
 
-import { CATEGORIES } from '../data/categories.js';
-import { PLAYERS_BY_ID } from '../data/players.js';
+import { categoriesForMode, playerForMode } from '../data/modes.js';
 
 /** Rating tiers, evaluated top-down; first match wins. */
 const TIERS = Object.freeze([
-  { min: 96, label: 'IMMORTAL GOAT', emoji: '🐐', blurb: 'A basketball deity. Statues will be built.' },
+  { min: 96, label: 'IMMORTAL GOAT', emoji: '🐐', blurb: 'A sporting deity. Statues will be built.' },
   { min: 92, label: 'Inner-Circle Legend', emoji: '🏆', blurb: 'Top-shelf, first-ballot, no debate.' },
   { min: 88, label: 'Hall of Famer', emoji: '🌟', blurb: 'A legendary career carved in stone.' },
   { min: 84, label: 'Perennial All-Star', emoji: '✨', blurb: 'Franchise cornerstone, fans love you.' },
@@ -17,6 +16,7 @@ const TIERS = Object.freeze([
 
 /**
  * @param {Record<string,string>} picks  categoryId -> playerId
+ * @param {string} mode  active mode id (selects category set + roster lookup)
  * @returns {{
  *   slots: {categoryId:string,label:string,icon:string,accent:string,playerId:string,score:number}[],
  *   base:number, chemistry:number, overall:number,
@@ -24,21 +24,19 @@ const TIERS = Object.freeze([
  *   badges:string[]
  * }}
  */
-export function scoreBuild(picks) {
-  const slots = CATEGORIES.map((c) => {
-    const player = PLAYERS_BY_ID[picks[c.id]];
-    return {
-      categoryId: c.id,
-      label: c.label,
-      icon: c.icon,
-      accent: c.accent,
-      playerId: player.id,
-      score: player.attrs[c.id],
-    };
-  });
+export function scoreBuild(picks, mode) {
+  const players = categoriesForMode(mode).map((c) => playerForMode(mode, picks[c.id]));
+  const slots = categoriesForMode(mode).map((c, i) => ({
+    categoryId: c.id,
+    label: c.label,
+    icon: c.icon,
+    accent: c.accent,
+    playerId: players[i].id,
+    score: players[i].attrs[c.id],
+  }));
 
   const base = avg(slots.map((s) => s.score));
-  const chemistry = chemistryBonus(slots);
+  const chemistry = chemistryBonus(players);
   const overall = clamp(Math.round(base + chemistry), 0, 99);
 
   return {
@@ -47,33 +45,31 @@ export function scoreBuild(picks) {
     chemistry,
     overall,
     tier: tierFor(overall),
-    badges: badgesFor(slots),
+    badges: badgesFor(players, slots),
   };
 }
 
 /**
  * Chemistry rewards thematic builds: stacking one player ("one-man army"),
- * leaning on a single franchise, or a single-era squad. Capped so it tops up
- * a good build rather than dominating it.
+ * leaning on a single team, or a single-era squad. Capped so it tops up a good
+ * build rather than dominating it.
  */
-function chemistryBonus(slots) {
-  const players = slots.map((s) => PLAYERS_BY_ID[s.playerId]);
+function chemistryBonus(players) {
   let bonus = 0;
 
   bonus += maxDuplicateCount(players.map((p) => p.id)) >= 3 ? 4 : 0; // one-man army
-  bonus += maxDuplicateCount(players.map((p) => p.team)) >= 4 ? 2 : 0; // franchise core
+  bonus += maxDuplicateCount(players.map((p) => p.team)) >= 4 ? 2 : 0; // team core
   bonus += isUniform(players.map((p) => p.era)) ? 3 : 0; // same-era squad
 
   return Math.min(bonus, 6);
 }
 
 /** Earned flair shown on the result card. */
-function badgesFor(slots) {
-  const players = slots.map((s) => PLAYERS_BY_ID[s.playerId]);
+function badgesFor(players, slots) {
   const badges = [];
 
   if (maxDuplicateCount(players.map((p) => p.id)) >= 3) badges.push('🦸 One-Man Army');
-  if (maxDuplicateCount(players.map((p) => p.team)) >= 4) badges.push('🏟️ Franchise Core');
+  if (maxDuplicateCount(players.map((p) => p.team)) >= 4) badges.push('🏟️ Team Core');
   if (isUniform(players.map((p) => p.era))) badges.push(`⏳ ${players[0].era} Era Squad`);
   if (new Set(players.map((p) => p.id)).size === slots.length) badges.push('🌍 All-Star Mix');
   if (slots.every((s) => s.score >= 90)) badges.push('💯 No Weak Links');

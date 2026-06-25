@@ -1,10 +1,16 @@
-# Build Your GOAT 🐐 — NBA Edition
+# Build Your GOAT 🐐 — NBA · EuroLeague · Soccer
 
 **▶ Play now: https://royc4515.github.io/build-your-goat/** (works on desktop & mobile)
 
-A casual, TikTok-filter-style basketball game. Spin a slot reel of NBA legends,
-**lock one player into each of six skill slots**, and reveal the highest-rated
-"GOAT" you can assemble. Chase the perfect **99 OVR**.
+A casual, TikTok-filter-style sports game. Pick a **mode**, spin a slot reel of
+legends or current stars, **lock one player into each of six skill slots** (timing
+is everything — you get the face on screen when you tap), and reveal the
+highest-rated "GOAT" you can assemble. Chase the perfect **99 OVR**.
+
+**Modes:** NBA (Legends / Current), EuroLeague (Legends / Current), Soccer
+(Legends / Current), and Mondial (2026 / Legends). Basketball modes score on
+Scoring/Playmaking/Defense/Athleticism/Clutch/Leadership; soccer on
+Pace/Shooting/Passing/Dribbling/Defending/Physical.
 
 No build step and no dependencies. Player cards show **real NBA headshots** (from
 the official NBA CDN) framed on team-colored panels, with a CSS-only jersey
@@ -54,8 +60,9 @@ js/
     rating.js         # pure scoring: overall, chemistry, tier, badges
     random.js         # shuffle / pick helpers
   data/
-    players.js        # roster: ratings, team colors, NBA headshot ids, preload
-    categories.js     # the six skill slots (round order)
+    players.js        # NBA legends roster: ratings, colors, headshot ids
+    categories.js     # the six basketball skill slots (round order)
+    modes.js          # all modes: sport + category set + roster + lookups
   audio/
     context.js        # shared Web Audio graph (master / sfx / music buses, mute)
     sfx.js            # basketball effects: dribble, swish, buzzer, crowd
@@ -67,7 +74,9 @@ js/
     playScreen.js     # one play round: banner, pause btn, reel, lock, slot tray
     pauseMenu.js      # in-game pause overlay (resume / settings / quit)
     screens.js        # intro and result screens
+    modeSelect.js     # mode picker (sports grouped, legends/current/mondial)
     settingsScreen.js # settings UI (toggles, sliders, segmented controls)
+    fit.js            # scales each screen to fit the viewport (no scroll)
     sound.js          # thin audio facade (sfx + mute + music + settings) for UI
 ```
 
