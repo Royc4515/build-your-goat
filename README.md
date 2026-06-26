@@ -78,6 +78,7 @@ js/
     modeSelect.js     # mode picker (sports grouped, legends/current/mondial)
     settingsScreen.js # settings UI (toggles, sliders, segmented controls)
     fit.js            # scales each screen to fit the viewport (no scroll)
+    share.js          # social share sheet (X / WhatsApp / Telegram / FB / Reddit)
     sound.js          # thin audio facade (sfx + mute + music + settings) for UI
 ```
 

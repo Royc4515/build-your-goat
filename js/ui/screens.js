@@ -7,6 +7,30 @@ import { playerCard } from './playerCard.js';
 import { MODES, categoriesForMode, playerForMode } from '../data/modes.js';
 import { scoreBuild } from '../core/rating.js';
 import { sfx } from './sound.js';
+import { openShareSheet } from './share.js';
+
+/** Public URL players are pointed at when they share. */
+const GAME_URL = 'https://royc4515.github.io/build-your-goat/';
+
+/** Share payload for the game itself (intro screen). */
+function gameSharePayload() {
+  return {
+    title: 'Build Your GOAT',
+    text: '🐐 Build Your GOAT — spin legends & current stars across NBA, EuroLeague & Soccer into one ultimate team. Can you hit a perfect 99 OVR?',
+    url: GAME_URL,
+  };
+}
+
+/** Share payload summarising a finished build (result screen). */
+function resultSharePayload(mode, picks, result) {
+  const text = [
+    `🐐 My GOAT — ${result.overall} OVR (${result.tier.label})`,
+    `${MODES[mode].icon} ${MODES[mode].label}`,
+    ...categoriesForMode(mode).map((c) => `${c.icon} ${c.label}: ${playerForMode(mode, picks[c.id]).name}`),
+    ...(result.badges.length ? ['', result.badges.join('  ')] : []),
+  ].join('\n');
+  return { title: `My GOAT — ${result.overall} OVR`, text, url: GAME_URL };
+}
 
 /** Title screen. */
 export function renderIntro(root, { onStart, onSettings }) {
@@ -43,6 +67,9 @@ export function renderIntro(root, { onStart, onSettings }) {
     onSettings();
   });
 
+  const share = el('button', { class: 'btn btn--ghost', text: '📤  Share' });
+  share.addEventListener('click', () => openShareSheet(gameSharePayload()));
+
   root.append(
     el('section', {
       class: 'screen intro',
@@ -58,7 +85,7 @@ export function renderIntro(root, { onStart, onSettings }) {
         el('p', { class: 'subtitle', text: 'Six skills. One legend. Spin, lock, and reveal the greatest of all time you can assemble.' }),
         el('ul', { class: 'how', children: steps }),
         start,
-        settings,
+        el('div', { class: 'intro__actions', children: [settings, share] }),
       ],
     })
   );
@@ -122,8 +149,8 @@ export function renderResult(root, { mode, picks, onPlayAgain, onChangeMode }) {
     onChangeMode();
   });
 
-  const share = el('button', { class: 'btn btn--ghost btn--block', text: '📋  Copy Result' });
-  share.addEventListener('click', () => copyResult(share, mode, picks, result));
+  const share = el('button', { class: 'btn btn--primary btn--block', text: '📤  Share Result' });
+  share.addEventListener('click', () => openShareSheet(resultSharePayload(mode, picks, result)));
 
   root.append(
     el('section', {
@@ -140,30 +167,4 @@ export function renderResult(root, { mode, picks, onPlayAgain, onChangeMode }) {
       ],
     })
   );
-}
-
-/** Copy a plain-text summary to the clipboard with graceful fallback. */
-function copyResult(button, mode, picks, result) {
-  sfx.click();
-  const lines = [
-    `🐐 MY GOAT — ${result.overall} OVR (${result.tier.label})`,
-    `${MODES[mode].icon} ${MODES[mode].label}`,
-    ...categoriesForMode(mode).map((c) => `${c.icon} ${c.label}: ${playerForMode(mode, picks[c.id]).name}`),
-    ...(result.badges.length ? ['', result.badges.join('  ')] : []),
-    '',
-    'Build yours: https://royc4515.github.io/build-your-goat/',
-  ];
-  const text = lines.join('\n');
-
-  const flash = (msg) => {
-    const original = '📋  Copy Result';
-    button.textContent = msg;
-    window.setTimeout(() => (button.textContent = original), 1600);
-  };
-
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(text).then(() => flash('✅  Copied!')).catch(() => flash('⚠️  Copy failed'));
-  } else {
-    flash('⚠️  Not supported');
-  }
 }
