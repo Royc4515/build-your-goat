@@ -104,16 +104,36 @@ function mk(id, name, short, monogram, number, team, era, colors, attrs, nbaId) 
   });
 }
 
-/** Official NBA headshot URL (transparent-background cutout) for a player. */
+/**
+ * Headshot URL for a player, or `null` if the player carries no photo source.
+ * Two sources are supported:
+ *  - `nbaId`: official NBA headshot CDN (transparent-background cutout).
+ *  - `photo`: a Wikimedia Commons file name, served via the stable FilePath
+ *    redirect. This is how non-NBA players (soccer, EuroLeague) get real faces.
+ * `photo` wins if both are present.
+ */
 export function headshotUrl(player) {
-  return `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.nbaId}.png`;
+  if (player.photo) {
+    return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(player.photo)}?width=512`;
+  }
+  if (player.nbaId) {
+    return `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.nbaId}.png`;
+  }
+  return null;
+}
+
+/** True if the player has any photo source (NBA id or Commons file). */
+export function hasHeadshot(player) {
+  return Boolean(player.photo || player.nbaId);
 }
 
 /** Warm the browser cache so the fast-cycling reel never shows blank frames. */
 export function preloadHeadshots() {
   for (const p of PLAYERS) {
+    const url = headshotUrl(p);
+    if (!url) continue;
     const img = new Image();
-    img.src = headshotUrl(p);
+    img.src = url;
   }
 }
 

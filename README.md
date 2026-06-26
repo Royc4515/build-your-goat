@@ -12,8 +12,9 @@ highest-rated "GOAT" you can assemble. Chase the perfect **99 OVR**.
 Scoring/Playmaking/Defense/Athleticism/Clutch/Leadership; soccer on
 Pace/Shooting/Passing/Dribbling/Defending/Physical.
 
-No build step and no dependencies. Player cards show **real NBA headshots** (from
-the official NBA CDN) framed on team-colored panels, with a CSS-only jersey
+No build step and no dependencies. Player cards show **real headshots for every
+player** — NBA stars from the official NBA CDN, and soccer / EuroLeague players
+from Wikimedia Commons — framed on team-colored panels, with a CSS-only jersey
 fallback if an image ever fails to load. All sound — a looping arena/hip-hop beat
 plus basketball effects (dribble, swish, buzzer, crowd) — is **synthesized with
 the Web Audio API**, so there are no audio files to ship or license.
@@ -95,10 +96,12 @@ Plus a one-tap **Reset to defaults**.
 ## Design notes
 - **Immutable state.** Every transition in `core/state.js` returns a new frozen
   object; `main.js` is the only place the current reference is reassigned.
-- **Real photos, no letters.** In the default Photos mode, cards show official
-  NBA headshots over a team-colored panel (themed via `--c1` / `--c2`) — the
-  monogram is not rendered at all, so there are never letters behind a face. If a
-  photo fails to load, the bare panel + number remain (still never a dead card).
+- **Real photos, no letters.** In the default Photos mode, cards show real
+  headshots over a team-colored panel (themed via `--c1` / `--c2`) — NBA players
+  use the NBA CDN (`nbaId`), while soccer / EuroLeague players use a Wikimedia
+  Commons file (`photo`). The monogram is not rendered at all, so there are never
+  letters behind a face. If a photo fails to load, the bare panel + number remain
+  (still never a dead card).
   Headshots are preloaded so the fast reel never flashes blank. The optional
   Jerseys card-art mode brings back CSS monogram art instead.
 - **Zero audio files.** Effects and the background beat are synthesized at
@@ -110,6 +113,9 @@ Plus a one-tap **Reset to defaults**.
 
 ## Customizing
 - Add players in `js/data/players.js` (give each one a rating for every category
-  id and a `[primary, secondary]` color pair).
+  id and a `[primary, secondary]` color pair). For a headshot, give NBA players
+  an `nbaId`; for other sports add the player id to the `PHOTOS` map in
+  `js/data/modes.js` with a Wikimedia Commons file name. No photo? The card just
+  shows jersey art.
 - Change the skills or round order in `js/data/categories.js`.
 - Tune scoring, tiers, and chemistry rules in `js/core/rating.js`.
