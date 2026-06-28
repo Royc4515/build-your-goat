@@ -1814,6 +1814,80 @@ body {
   opacity: 0.92;
 }
 
+/* --- M7: Daily challenge button (mode select) ----------------------------- */
+.daily-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+  background: linear-gradient(135deg, #1a2a50 0%, #0f1d3a 100%);
+  border: 1.5px solid rgba(255, 209, 102, 0.45);
+  border-radius: var(--r-md);
+  padding: 0.9rem 1.1rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+.daily-btn:hover {
+  border-color: rgba(255, 209, 102, 0.8);
+  background: linear-gradient(135deg, #1f3060 0%, #131f3f 100%);
+}
+.daily-btn--done {
+  border-color: rgba(6, 214, 160, 0.5);
+  background: linear-gradient(135deg, #0d2a26 0%, #0a1c1a 100%);
+}
+.daily-btn__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.daily-btn__label {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--gold);
+  letter-spacing: 0.01em;
+}
+.daily-btn__badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #06d6a0;
+  background: rgba(6, 214, 160, 0.18);
+  border: 1px solid rgba(6, 214, 160, 0.4);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+}
+.daily-btn__sub {
+  font-size: 0.82rem;
+  color: var(--ink-dim);
+}
+
+/* --- M7: Daily result elements -------------------------------------------- */
+.result__mode--daily {
+  color: var(--gold);
+  border-color: rgba(255, 209, 102, 0.4);
+  background: rgba(255, 209, 102, 0.1);
+}
+.emoji-grid {
+  font-size: 1.5rem;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  padding: 0.25rem 0;
+}
+.streak-badge {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffd60a;
+  background: rgba(255, 214, 10, 0.1);
+  border: 1px solid rgba(255, 214, 10, 0.3);
+  border-radius: 999px;
+  padding: 0.25rem 0.9rem;
+  align-self: center;
+}
+.result__actions--single {
+  grid-template-columns: 1fr;
+}
+
 /* --- Tutorial: welcome slides + live guided game ─────────────────────────── */
 .walkthrough {
   position: fixed;

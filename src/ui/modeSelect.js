@@ -5,6 +5,8 @@
 import { el, clear } from './dom.js';
 import { MODES, MODE_IDS, supportsActors } from '../data/modes.js';
 import { sfx } from './sound.js';
+import { todayUTC, dailyNumber } from '../engine/daily/daily.js';
+import { hasPlayedToday, getStreak } from '../persistence/streak.js';
 
 const SPORT_SECTIONS = [
   { sport: 'basketball', title: '🏀 Basketball' },
@@ -19,7 +21,7 @@ const DIFFICULTIES = [
 
 /**
  * @param {HTMLElement} root
- * @param {{ onPick:(mode:string, opp:{vsAI:boolean,difficulty:string})=>void, onBack:()=>void }} handlers
+ * @param {{ onPick:(mode:string, opp:{vsAI:boolean,isDaily:boolean,difficulty:string})=>void, onBack:()=>void }} handlers
  */
 export function renderModeSelect(root, { onPick, onBack }) {
   // Local selection state; re-paints the screen when it changes.
@@ -27,6 +29,11 @@ export function renderModeSelect(root, { onPick, onBack }) {
 
   const paint = () => {
     clear(root);
+
+    const today = todayUTC();
+    const played = hasPlayedToday(today);
+    const streak = getStreak();
+    const dayNum = dailyNumber(today);
 
     const back = el('button', {
       class: 'iconbtn settings__back',
@@ -80,7 +87,7 @@ export function renderModeSelect(root, { onPick, onBack }) {
       if (!disabled) {
         card.addEventListener('click', () => {
           sfx.click();
-          onPick(id, { vsAI: sel.vsAI, difficulty: sel.difficulty });
+          onPick(id, { vsAI: sel.vsAI, isDaily: false, difficulty: sel.difficulty });
         });
       }
       return card;
@@ -99,6 +106,30 @@ export function renderModeSelect(root, { onPick, onBack }) {
       }),
     );
 
+    const dailyBtn = el('button', {
+      class: ['daily-btn', played ? 'daily-btn--done' : ''],
+      attrs: { type: 'button' },
+      children: [
+        el('div', {
+          class: 'daily-btn__top',
+          children: [
+            el('span', { class: 'daily-btn__label', text: `📅  Daily #${dayNum}` }),
+            played ? el('span', { class: 'daily-btn__badge', text: '✓ Done' }) : null,
+          ],
+        }),
+        el('div', {
+          class: 'daily-btn__sub',
+          text: streak.current > 0
+            ? `🔥 ${streak.current} day streak — play today's challenge`
+            : 'Play today\'s challenge',
+        }),
+      ],
+    });
+    dailyBtn.addEventListener('click', () => {
+      sfx.click();
+      onPick('nba-legends', { vsAI: false, isDaily: true, difficulty: 'pro' });
+    });
+
     root.append(
       el('section', {
         class: 'screen modes',
@@ -107,6 +138,7 @@ export function renderModeSelect(root, { onPick, onBack }) {
             class: 'settings__head',
             children: [back, el('h1', { class: 'settings__title', text: 'Choose a Mode' })],
           }),
+          dailyBtn,
           el('div', { class: 'opp-picker', children: [opponent, difficulty] }),
           ...sections,
         ],
