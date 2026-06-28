@@ -13,7 +13,8 @@ import {
 } from './core/state.js';
 import { toggleMute, music, applyAudioSettings } from './ui/sound.js';
 import { fitScreen } from './ui/fit.js';
-import { preloadModeHeadshots, DEFAULT_MODE } from './data/modes.js';
+import { DEFAULT_MODE } from './data/modes.js';
+import { preloadModeHeadshots } from './data/headshots.js';
 import { getSettings, onSettingsChange } from './core/settings.js';
 
 const root = byId('app');

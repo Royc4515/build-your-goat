@@ -1,25 +1,12 @@
 // Roster of NBA legends and stars used to build your GOAT.
-// Each player has attribute ratings (0-99) used both for the reel display and
-// for the final GOAT score, team colors that theme the card art, and an `nbaId`
-// for the official NBA headshot. If a photo ever fails to load, the card falls
-// back to CSS-only jersey art (see playerCard.js) so nothing breaks.
+// Each player has attribute ratings (0-99) used both for the reel display and for
+// the final GOAT score, team colors that theme the card art, and an `nbaId` for
+// the official NBA headshot. Headshot URL + preloading live in data/headshots.ts
+// (the only data module that touches the DOM), keeping this file engine-pure.
 
-/**
- * @typedef {Object} Player
- * @property {string} id        Stable unique id (kebab-case).
- * @property {string} name      Full display name.
- * @property {string} short     Short surname used on the card.
- * @property {string} monogram  1-2 letters shown on the jersey fallback art.
- * @property {number} number    Jersey number.
- * @property {string} team      Team abbreviation.
- * @property {string} era       Decade-ish label, used for chemistry flavor.
- * @property {[string, string]} colors  [primary, secondary] hex colors.
- * @property {Object} attrs     Attribute ratings keyed by category id.
- * @property {number} nbaId     NBA.com person id for the official headshot.
- */
+import type { Player, CategoryId } from '../engine/types.js';
 
-/** @type {Player[]} */
-export const PLAYERS = Object.freeze([
+export const PLAYERS: readonly Player[] = Object.freeze([
   mk('jordan', 'Michael Jordan', 'Jordan', 'MJ', 23, 'CHI', '90s', ['#CE1141', '#000000'],
     { scoring: 99, playmaking: 85, defense: 96, athleticism: 97, clutch: 99, leadership: 98 }, 893),
   mk('lebron', 'LeBron James', 'James', 'LJ', 23, 'LAL', '2010s', ['#552583', '#FDB927'],
@@ -89,7 +76,18 @@ export const PLAYERS = Object.freeze([
 ]);
 
 /** Build a frozen player record, keeping the call sites above compact. */
-function mk(id, name, short, monogram, number, team, era, colors, attrs, nbaId) {
+function mk(
+  id: string,
+  name: string,
+  short: string,
+  monogram: string,
+  number: number,
+  team: string,
+  era: string,
+  colors: readonly [string, string],
+  attrs: Record<CategoryId, number>,
+  nbaId: number | null = null,
+): Player {
   return Object.freeze({
     id,
     name,
@@ -98,29 +96,8 @@ function mk(id, name, short, monogram, number, team, era, colors, attrs, nbaId) 
     number,
     team,
     era,
-    colors: Object.freeze(colors),
+    colors: Object.freeze(colors) as readonly [string, string],
     attrs: Object.freeze(attrs),
     nbaId,
   });
 }
-
-/** Official NBA headshot URL (transparent-background cutout) for a player. */
-export function headshotUrl(player) {
-  return `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.nbaId}.png`;
-}
-
-/** Warm the browser cache so the fast-cycling reel never shows blank frames. */
-export function preloadHeadshots() {
-  for (const p of PLAYERS) {
-    const img = new Image();
-    img.src = headshotUrl(p);
-  }
-}
-
-/** Fast lookup by id, frozen so callers can't mutate the index. */
-export const PLAYERS_BY_ID = Object.freeze(
-  PLAYERS.reduce((acc, p) => {
-    acc[p.id] = p;
-    return acc;
-  }, {})
-);

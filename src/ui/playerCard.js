@@ -3,7 +3,7 @@
 // so there are no image files to load or break.
 
 import { el } from './dom.js';
-import { headshotUrl } from '../data/players.js';
+import { headshotUrl } from '../data/headshots.js';
 import { getSetting } from '../core/settings.js';
 
 /** Map a 0-99 rating to a label tier for color coding. */
