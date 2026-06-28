@@ -12,7 +12,7 @@ const cats: Category[] = [
 function mk(id: string, attrs: Record<string, number>, team = id, era = id): Player {
   return {
     id, name: id, short: id, monogram: id, number: 0, team, era,
-    colors: ['#000', '#fff'], attrs, nbaId: null,
+    colors: ['#000', '#fff'], attrs, nbaId: null, photo: null,
   };
 }
 
