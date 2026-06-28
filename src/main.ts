@@ -137,13 +137,13 @@ function mountPlaying(): void {
       onAdvance: () => setApp({ ...app, match: advanceAfterReveal(match) }),
       onPause: pauseGame,
       onBack,
+      onReroll: () => setApp({ ...app, match: useReroll(match) }),
     });
   } else {
     teardownRound = mountPlayRound(root, match, {
       onLocked: (playerId: string) => setApp({ ...app, match: lockPick(match, playerId) }),
       onPause: pauseGame,
       onBack,
-      onReroll: () => setApp({ ...app, match: useReroll(match) }),
       onFreeze: () => setApp({ ...app, match: useFreeze(match) }),
     });
   }
@@ -253,5 +253,5 @@ wireMuteButton();
 wireBrandButton();
 render();
 
-// First-time players get the how-to once (reopenable from the intro screen).
-if (!hasSeenTutorial()) openTutorial();
+// First-time players get the walkthrough once (reopenable from the intro screen).
+if (!hasSeenTutorial()) openTutorial(() => fitActiveScreen());

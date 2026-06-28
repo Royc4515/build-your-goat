@@ -20,8 +20,8 @@ import type {
 import { HUMAN } from '../types.js';
 import { categoriesForMode, rosterForMode } from '../../data/modes.js';
 import { scoreBuild } from '../scoring/scoring.js';
-import { makeRng, shuffle } from '../rng.js';
-import { createPool, removeFromPool, isAvailable } from '../pool/pool.js';
+import { makeRng } from '../rng.js';
+import { createPool, removeFromPool, returnToPool, isAvailable } from '../pool/pool.js';
 import { initEconomy, canReroll, canFreeze, spendReroll, spendFreeze } from '../economy/economy.js';
 import { buildDraftOrder } from '../draft/draftOrder.js';
 import { chooseDraftPick } from '../ai/chooseDraftPick.js';
@@ -141,17 +141,22 @@ export function advanceAfterReveal(state: MatchState): MatchState {
   });
 }
 
-/** Spend a Reroll: reshuffle the remaining pool via the continued PRNG. No-op
- *  unless a reroll is available and a human reel is live (phase 'spinning'). */
+/** Spend a Reroll to UNDO the just-locked human pick and re-spin that slot: the
+ *  player returns to the pool and the turn goes back to spinning. No-op unless a
+ *  reroll is available and a human pick is on the reveal screen. */
 export function useReroll(state: MatchState): MatchState {
-  if (state.phase !== 'spinning' || state.reveal || !canReroll(state.economy)) return state;
-  const rng = makeRng(state.rngState);
-  const available = Object.freeze(shuffle(rng.next, state.pool.available));
+  if (state.phase !== 'reveal' || !state.reveal || state.reveal.actor !== HUMAN) return state;
+  if (!canReroll(state.economy)) return state;
+  const { categoryId, playerId } = state.reveal;
+  const board: Record<string, PlayerId> = { ...state.boards[HUMAN] };
+  delete board[categoryId];
   return Object.freeze({
     ...state,
-    pool: Object.freeze({ order: state.pool.order, available }),
+    phase: 'spinning',
+    boards: Object.freeze({ ...state.boards, [HUMAN]: Object.freeze(board) }),
+    pool: returnToPool(state.pool, playerId),
     economy: spendReroll(state.economy),
-    rngState: rng.state(),
+    reveal: null,
   });
 }
 

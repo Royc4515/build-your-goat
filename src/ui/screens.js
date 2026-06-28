@@ -9,6 +9,7 @@ import { scoreBuild } from '../engine/scoring/scoring.js';
 import { matchWinner } from '../engine/match/match.js';
 import { HUMAN } from '../engine/types.js';
 import { sfx } from './sound.js';
+import { fitScreen } from './fit.js';
 import { openShareSheet } from './share.js';
 import { openTutorial } from './tutorial.js';
 
@@ -74,7 +75,7 @@ export function renderIntro(root, { onStart, onSettings }) {
   share.addEventListener('click', () => openShareSheet(gameSharePayload()));
 
   const howto = el('button', { class: 'btn btn--ghost', text: '📖  How to Play' });
-  howto.addEventListener('click', () => openTutorial());
+  howto.addEventListener('click', () => openTutorial(() => fitScreen(root.querySelector('.screen'))));
 
   root.append(
     el('section', {

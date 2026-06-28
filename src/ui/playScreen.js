@@ -29,7 +29,7 @@ const humanBoard = (state) => state.boards[HUMAN] ?? {};
  * Mount the human's spinning round.
  * @returns {() => void} cleanup
  */
-export function mountPlayRound(root, state, { onLocked, onPause, onBack, onReroll, onFreeze }) {
+export function mountPlayRound(root, state, { onLocked, onPause, onBack, onFreeze }) {
   clear(root);
   const category = currentCategory(state);
   const categories = categoriesForMode(state.config.mode);
@@ -57,7 +57,7 @@ export function mountPlayRound(root, state, { onLocked, onPause, onBack, onRerol
       stage,
       liveValue,
       lockBtn,
-      powerUps({ economy: state.economy, frozen: state.frozen, onReroll, onFreeze }),
+      powerUps({ economy: state.economy, frozen: state.frozen, allowFreeze: true, onFreeze }),
       buildProjection(state),
       rolesTracker(state),
       opponentBlock(state),
@@ -107,7 +107,7 @@ export function mountPlayRound(root, state, { onLocked, onPause, onBack, onRerol
  * picks are labelled and auto-advance after a beat.
  * @returns {() => void} cleanup
  */
-export function mountReveal(root, state, { onAdvance, onPause, onBack }) {
+export function mountReveal(root, state, { onAdvance, onPause, onBack, onReroll }) {
   clear(root);
   const reveal = state.reveal;
   const isCpu = reveal.actor === 'cpu';
@@ -156,6 +156,10 @@ export function mountReveal(root, state, { onAdvance, onPause, onBack }) {
       advance();
     });
     children.push(continueBtn);
+    // Redo: undo this pick and re-spin the slot (spends a reroll).
+    children.push(
+      powerUps({ economy: state.economy, frozen: false, allowReroll: true, onReroll }),
+    );
   }
 
   children.push(buildProjection(state), rolesTracker(state), opponentBlock(state), slotTray(state));

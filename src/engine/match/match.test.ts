@@ -75,9 +75,34 @@ describe('solo transitions', () => {
 });
 
 describe('economy', () => {
-  it('reroll/freeze decrement and reset (frozen clears next round)', () => {
+  it('reroll undoes the just-locked pick, returns it to the pool, re-spins', () => {
     const m0 = createMatch(solo(7));
-    expect(useReroll(m0).economy.rerolls).toBe(2);
+    const cat = currentCategory(m0)!;
+    const id = m0.pool.available[0]!;
+    const locked = lockPick(m0, id);
+    expect(locked.phase).toBe('reveal');
+    expect(locked.boards.human![cat.id]).toBe(id);
+
+    const undone = useReroll(locked);
+    expect(undone.phase).toBe('spinning');
+    expect(undone.reveal).toBeNull();
+    expect(undone.economy.rerolls).toBe(2);
+    expect(undone.cursor).toBe(0); // same slot again
+    expect(undone.boards.human![cat.id]).toBeUndefined(); // pick removed
+    expect(undone.pool.available).toContain(id); // returned to the pool
+  });
+
+  it('reroll is a no-op while spinning (nothing to undo) and when none are left', () => {
+    const m0 = createMatch(solo(7));
+    expect(useReroll(m0)).toBe(m0); // spinning, no reveal
+    let spent = m0;
+    for (let i = 0; i < 5; i++) spent = useReroll(lockPick(spent, spent.pool.available[0]!));
+    expect(spent.economy.rerolls).toBe(0);
+    expect(useReroll(lockPick(spent, spent.pool.available[0]!)).economy.rerolls).toBe(0);
+  });
+
+  it('freeze slows the round and clears after advancing', () => {
+    const m0 = createMatch(solo(7));
     const f = useFreeze(m0);
     expect(f.frozen).toBe(true);
     expect(f.economy.freezes).toBe(1);
