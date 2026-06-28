@@ -105,10 +105,11 @@ export function renderResult(root, { state, onPlayAgain, onChangeMode }) {
   const picks = state.boards[HUMAN];
   const result = scoreBuild(picks, mode);
   const categories = categoriesForMode(mode);
-  const vsAI = state.config.actors.includes('cpu');
+  const opponentId = state.config.actors.find(a => a !== HUMAN) ?? null;
+  const isVersus = Boolean(opponentId);
   sfx.reveal();
 
-  const outcome = vsAI ? versusOutcome(state, result) : null;
+  const outcome = isVersus ? versusOutcome(state, opponentId, result) : null;
 
   const ring = el('div', {
     class: 'overall',
@@ -155,17 +156,19 @@ export function renderResult(root, { state, onPlayAgain, onChangeMode }) {
     ),
   });
 
-  // vs-CPU: show the CPU's six picks too, so both teams can be compared.
-  const cpuLineup = vsAI
+  // vs opponent: show the opponent's six picks too, so both teams can be compared.
+  const opponentBoard = opponentId ? state.boards[opponentId] : null;
+  const opponentLabel = opponentId === 'cpu' ? '🤖  CPU LINEUP' : '🧑‍🤝‍🧑  PLAYER 2 LINEUP';
+  const cpuLineup = opponentBoard
     ? el('div', {
         class: 'lineup lineup--cpu',
         children: categories.map((c) =>
-          playerCard(playerForMode(mode, state.boards.cpu[c.id]), { category: c, categories, compact: true }),
+          playerCard(playerForMode(mode, opponentBoard[c.id]), { category: c, categories, compact: true }),
         ),
       })
     : null;
-  const cpuHeading = vsAI
-    ? el('h2', { class: 'lineup__heading lineup__heading--cpu', text: '🤖  CPU LINEUP' })
+  const cpuHeading = opponentBoard
+    ? el('h2', { class: 'lineup__heading lineup__heading--cpu', text: opponentLabel })
     : null;
 
   const again = el('button', { class: 'btn btn--primary', text: '🔁  Play Again' });
@@ -203,16 +206,17 @@ export function renderResult(root, { state, onPlayAgain, onChangeMode }) {
   );
 }
 
-/** Win/lose banner + CPU score for a vs-AI match. */
-function versusOutcome(state, humanResult) {
+/** Win/lose banner for vs-AI or hotseat. */
+function versusOutcome(state, opponentId, humanResult) {
   const mode = state.config.mode;
-  const cpuResult = scoreBuild(state.boards.cpu, mode);
+  const oppResult = scoreBuild(state.boards[opponentId], mode);
   const winner = matchWinner(state);
+  const isHotseat = state.config.kind === 'hotseat';
   const verdict =
     winner === 'tie'
       ? { cls: 'outcome--tie', text: `🤝  Tie — ${humanResult.overall} all` }
       : winner === HUMAN
-        ? { cls: 'outcome--win', text: `🏆  You win!  ${humanResult.overall} – ${cpuResult.overall}` }
-        : { cls: 'outcome--lose', text: `😤  CPU wins  ${cpuResult.overall} – ${humanResult.overall}` };
+        ? { cls: 'outcome--win', text: `🏆  ${isHotseat ? 'Player 1 wins!' : 'You win!'}  ${humanResult.overall} – ${oppResult.overall}` }
+        : { cls: 'outcome--lose', text: `${isHotseat ? '🏆  Player 2 wins!' : '😤  CPU wins'}  ${oppResult.overall} – ${humanResult.overall}` };
   return el('div', { class: ['outcome', verdict.cls], text: verdict.text });
 }

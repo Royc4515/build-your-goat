@@ -10,7 +10,7 @@ import { byId } from './ui/dom.js';
 import { renderIntro, renderResult } from './ui/screens.js';
 import { renderSettings } from './ui/settingsScreen.js';
 import { renderModeSelect } from './ui/modeSelect.js';
-import { mountPlayRound, mountReveal, mountAIThinking } from './ui/playScreen.js';
+import { mountPlayRound, mountReveal, mountAIThinking, mountPassDevice } from './ui/playScreen.js';
 import { mountPauseMenu } from './ui/pauseMenu.js';
 import {
   createMatch,
@@ -20,9 +20,10 @@ import {
   isComplete,
   useReroll,
   useFreeze,
+  currentTurn,
 } from './engine/match/match.js';
 import { policyFor } from './engine/ai/policy.js';
-import type { Difficulty, MatchConfig, MatchState, ModeId } from './engine/types.js';
+import type { ActorId, Difficulty, MatchConfig, MatchState, ModeId } from './engine/types.js';
 import { toggleMute, music, applyAudioSettings } from './ui/sound.js';
 import { fitScreen } from './ui/fit.js';
 import { openTutorial, hasSeenTutorial } from './ui/tutorial.js';
@@ -34,6 +35,7 @@ type Screen = 'intro' | 'modeSelect' | 'settings' | 'play';
 interface AppState {
   readonly screen: Screen;
   readonly match: MatchState | null;
+  readonly passTo: ActorId | null; // hotseat only: actor waiting to start their turn
 }
 
 const root = byId('app');
@@ -56,7 +58,7 @@ function applyEffects(settings: ReturnType<typeof getSettings>): void {
 applyEffects(getSettings());
 onSettingsChange(applyEffects);
 
-let app: AppState = { screen: 'intro', match: null };
+let app: AppState = { screen: 'intro', match: null, passTo: null };
 let teardownRound: (() => void) | null = null;
 let teardownPause: (() => void) | null = null;
 let paused = false;
@@ -79,11 +81,15 @@ function setApp(next: AppState): void {
 /** The opponent choice made on the mode-select screen. */
 export interface Opponent {
   readonly vsAI: boolean;
+  readonly vsHotseat: boolean;
   readonly difficulty: Difficulty;
 }
 
 /** Build a match config for the chosen mode + opponent. */
 function configFor(mode: ModeId, opp: Opponent): MatchConfig {
+  if (opp.vsHotseat) {
+    return { kind: 'hotseat', mode, seed: newSeed(), actors: ['human', 'human2'] };
+  }
   if (opp.vsAI) {
     return {
       kind: 'vsAI',
@@ -98,13 +104,14 @@ function configFor(mode: ModeId, opp: Opponent): MatchConfig {
 
 /** Begin a fresh match in the chosen mode + opponent. */
 function startMatch(mode: ModeId, opp: Opponent): AppState {
-  return { screen: 'play', match: createMatch(configFor(mode, opp)) };
+  return { screen: 'play', match: createMatch(configFor(mode, opp)), passTo: null };
 }
 
 /** Re-derive the opponent choice from a finished/running match (for "play again"). */
 function opponentOf(match: MatchState): Opponent {
+  const vsHotseat = match.config.actors.includes('human2');
   const vsAI = match.config.actors.includes('cpu');
-  return { vsAI, difficulty: match.config.policy?.difficulty ?? 'pro' };
+  return { vsHotseat, vsAI, difficulty: match.config.policy?.difficulty ?? 'pro' };
 }
 
 /** Mount the right play view for the current match: result, reveal, or a fresh
@@ -112,13 +119,21 @@ function opponentOf(match: MatchState): Opponent {
 function mountPlaying(): void {
   const match = app.match;
   if (!match) return;
-  const onBack = () => setApp({ screen: 'modeSelect', match: null });
+  const onBack = () => setApp({ screen: 'modeSelect', match: null, passTo: null });
 
   if (isComplete(match)) {
     renderResult(root, {
       state: match,
       onPlayAgain: () => setApp(startMatch(match.config.mode, opponentOf(match))),
-      onChangeMode: () => setApp({ screen: 'modeSelect', match: null }),
+      onChangeMode: () => setApp({ screen: 'modeSelect', match: null, passTo: null }),
+    });
+    return;
+  }
+
+  // Hotseat: show a "pass device" screen before each turn switch.
+  if (app.passTo !== null) {
+    teardownRound = mountPassDevice(root, app.passTo, {
+      onReady: () => setApp({ ...app, passTo: null }),
     });
     return;
   }
@@ -132,9 +147,21 @@ function mountPlaying(): void {
     return;
   }
 
+  /** Compute whether to show the pass-device screen after reveal in hotseat. */
+  const onAdvance = () => {
+    const next = advanceAfterReveal(match);
+    const prevActor = match.reveal?.actor ?? null;
+    const nextTurn = currentTurn(next);
+    const isHotseat = match.config.kind === 'hotseat';
+    const passTo = isHotseat && !isComplete(next) && nextTurn?.actor !== prevActor
+      ? nextTurn!.actor
+      : null;
+    setApp({ ...app, match: next, passTo });
+  };
+
   if (match.reveal) {
     teardownRound = mountReveal(root, match, {
-      onAdvance: () => setApp({ ...app, match: advanceAfterReveal(match) }),
+      onAdvance,
       onPause: pauseGame,
       onBack,
       onReroll: () => setApp({ ...app, match: useReroll(match) }),
@@ -165,7 +192,7 @@ function pauseGame(): void {
         teardownPause = null;
       }
       paused = false;
-      setApp({ screen: 'intro', match: null });
+      setApp({ screen: 'intro', match: null, passTo: null });
     },
   });
 }
@@ -201,23 +228,23 @@ function render(): void {
         // First user gesture — safe to kick off the background groove.
         onStart: () => {
           music.start();
-          setApp({ screen: 'modeSelect', match: null });
+          setApp({ screen: 'modeSelect', match: null, passTo: null });
         },
-        onSettings: () => setApp({ screen: 'settings', match: null }),
+        onSettings: () => setApp({ screen: 'settings', match: null, passTo: null }),
       });
       break;
     case 'modeSelect':
       renderModeSelect(root, {
-        onPick: (mode: ModeId, opp: { vsAI: boolean; difficulty: string }) => {
+        onPick: (mode: ModeId, opp: { vsAI: boolean; vsHotseat: boolean; difficulty: string }) => {
           music.start();
           preloadModeHeadshots(mode);
-          setApp(startMatch(mode, { vsAI: opp.vsAI, difficulty: opp.difficulty as Difficulty }));
+          setApp(startMatch(mode, { vsAI: opp.vsAI, vsHotseat: opp.vsHotseat ?? false, difficulty: opp.difficulty as Difficulty }));
         },
-        onBack: () => setApp({ screen: 'intro', match: null }),
+        onBack: () => setApp({ screen: 'intro', match: null, passTo: null }),
       });
       break;
     case 'settings':
-      renderSettings(root, { onBack: () => setApp({ screen: 'intro', match: null }) });
+      renderSettings(root, { onBack: () => setApp({ screen: 'intro', match: null, passTo: null }) });
       break;
     case 'play':
       mountPlaying();
@@ -252,7 +279,7 @@ function wireBrandButton(): void {
   if (!btn) return;
   btn.addEventListener('click', () => {
     if (app.screen === 'intro') return;
-    setApp({ screen: 'intro', match: null });
+    setApp({ screen: 'intro', match: null, passTo: null });
   });
 }
 
