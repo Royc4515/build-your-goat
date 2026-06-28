@@ -20,13 +20,15 @@ import type {
 import { HUMAN } from '../types.js';
 import { categoriesForMode, rosterForMode } from '../../data/modes.js';
 import { scoreBuild } from '../scoring/scoring.js';
-import { makeRng, shuffle } from '../rng.js';
-import { createPool, removeFromPool, isAvailable } from '../pool/pool.js';
+import { makeRng } from '../rng.js';
+import { createPool, removeFromPool, returnToPool, isAvailable } from '../pool/pool.js';
 import { initEconomy, canReroll, canFreeze, spendReroll, spendFreeze } from '../economy/economy.js';
-import { snakeDraftOrder } from '../draft/draftOrder.js';
+import { buildDraftOrder } from '../draft/draftOrder.js';
 import { chooseDraftPick } from '../ai/chooseDraftPick.js';
+import { FIRST_PICK_HUMAN_PROB } from '../config.js';
 
-/** Begin a fresh match. The seed fully determines the pool order and CPU picks. */
+/** Begin a fresh match. The seed fully determines the pool order, the draft coin
+ *  flip, and the CPU picks. */
 export function createMatch(config: MatchConfig): MatchState {
   const rng = makeRng(config.seed);
   const categories = categoriesForMode(config.mode);
@@ -34,7 +36,8 @@ export function createMatch(config: MatchConfig): MatchState {
     rng.next,
     rosterForMode(config.mode).map((p) => p.id),
   );
-  const draftOrder = snakeDraftOrder(config.actors, categories);
+  const seats = draftSeats(config, rng.next);
+  const draftOrder = buildDraftOrder(seats, categories);
   const boards: Record<ActorId, Board> = Object.create(null);
   for (const a of config.actors) boards[a] = Object.freeze({});
 
@@ -52,6 +55,17 @@ export function createMatch(config: MatchConfig): MatchState {
   });
 }
 
+/** Seat order for the draft. vs-CPU does a one-time weighted coin flip (seeded)
+ *  so whoever wins the toss picks first every round; everything else keeps the
+ *  configured actor order. */
+function draftSeats(config: MatchConfig, rng: () => number): readonly ActorId[] {
+  if (config.policy && config.actors.length === 2 && config.actors.includes('cpu')) {
+    const pHuman = FIRST_PICK_HUMAN_PROB[config.policy.difficulty];
+    return rng() < pHuman ? ['human', 'cpu'] : ['cpu', 'human'];
+  }
+  return config.actors;
+}
+
 /** The turn (actor + category) currently on the clock, or null once done. */
 export function currentTurn(state: MatchState): Turn | null {
   return state.draftOrder[state.cursor] ?? null;
@@ -60,6 +74,11 @@ export function currentTurn(state: MatchState): Turn | null {
 /** The actor currently on the clock, or null once done. */
 export function currentActor(state: MatchState): ActorId | null {
   return currentTurn(state)?.actor ?? null;
+}
+
+/** Who picks first this match (won the coin flip), or null if there's no draft. */
+export function firstPicker(state: MatchState): ActorId | null {
+  return state.draftOrder[0]?.actor ?? null;
 }
 
 /** The category currently being drafted, or null once done. */
@@ -122,17 +141,22 @@ export function advanceAfterReveal(state: MatchState): MatchState {
   });
 }
 
-/** Spend a Reroll: reshuffle the remaining pool via the continued PRNG. No-op
- *  unless a reroll is available and a human reel is live (phase 'spinning'). */
+/** Spend a Reroll to UNDO the just-locked human pick and re-spin that slot: the
+ *  player returns to the pool and the turn goes back to spinning. No-op unless a
+ *  reroll is available and a human pick is on the reveal screen. */
 export function useReroll(state: MatchState): MatchState {
-  if (state.phase !== 'spinning' || state.reveal || !canReroll(state.economy)) return state;
-  const rng = makeRng(state.rngState);
-  const available = Object.freeze(shuffle(rng.next, state.pool.available));
+  if (state.phase !== 'reveal' || !state.reveal || state.reveal.actor !== HUMAN) return state;
+  if (!canReroll(state.economy)) return state;
+  const { categoryId, playerId } = state.reveal;
+  const board: Record<string, PlayerId> = { ...state.boards[HUMAN] };
+  delete board[categoryId];
   return Object.freeze({
     ...state,
-    pool: Object.freeze({ order: state.pool.order, available }),
+    phase: 'spinning',
+    boards: Object.freeze({ ...state.boards, [HUMAN]: Object.freeze(board) }),
+    pool: returnToPool(state.pool, playerId),
     economy: spendReroll(state.economy),
-    rngState: rng.state(),
+    reveal: null,
   });
 }
 

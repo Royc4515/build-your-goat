@@ -19,6 +19,15 @@ export function removeFromPool(pool: Pool, id: PlayerId): Pool {
   });
 }
 
+/** Return a previously-drained player to the available set (e.g. an undone pick).
+ *  Reinserts at the player's original `order` position so the pool stays stable. */
+export function returnToPool(pool: Pool, id: PlayerId): Pool {
+  if (pool.available.includes(id) || !pool.order.includes(id)) return pool;
+  const rank = (x: PlayerId) => pool.order.indexOf(x);
+  const available = [...pool.available, id].sort((a, b) => rank(a) - rank(b));
+  return Object.freeze({ order: pool.order, available: Object.freeze(available) });
+}
+
 /** How many players are still pickable. */
 export function poolRemaining(pool: Pool): number {
   return pool.available.length;

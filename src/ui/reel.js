@@ -23,7 +23,7 @@ const SPIN_MS_BY_SPEED = { chill: 320, normal: 190, hyper: 115 };
  * @param {(player:import('../data/players.js').Player)=>void} cfg.onSettled
  * @returns {{ lock:()=>void, destroy:()=>void, isLocking:()=>boolean }}
  */
-export function createReel({ mount, category, pool, frozen = false, onSettled }) {
+export function createReel({ mount, category, categories, pool, frozen = false, onSettled, onTick }) {
   // `pool` is already in the engine's seeded order — cycle it as given so the
   // reel sequence is deterministic (no Math.random here).
   const order = pool;
@@ -41,7 +41,8 @@ export function createReel({ mount, category, pool, frozen = false, onSettled })
   let destroyed = false;
 
   function show(player) {
-    const card = playerCard(player, { category });
+    if (onTick) onTick(player); // report the on-screen player for the live value display
+    const card = playerCard(player, { category, categories });
     card.classList.add('reel-card');
 
     if (!animate) {

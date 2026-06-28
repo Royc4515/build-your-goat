@@ -5,6 +5,7 @@
 import { el } from './dom.js';
 import { headshotUrl, hasHeadshot } from '../data/headshots.js';
 import { getSetting } from '../core/settings.js';
+import { primaryRole } from '../engine/archetypes/archetypes.js';
 
 /** Map a 0-99 rating to a label tier for color coding. */
 function ratingClass(value) {
@@ -19,11 +20,13 @@ function ratingClass(value) {
  * @param {import('../data/players.js').Player} player
  * @param {Object} [opts]
  * @param {{id:string,label:string,icon:string}} [opts.category]  Highlight this attribute.
+ * @param {readonly {id:string,label:string,icon:string}[]} [opts.categories]
+ *   The full category set; when given, shows the player's signature-role badge.
  * @param {boolean} [opts.compact]  Smaller variant for the result lineup.
  * @returns {HTMLElement}
  */
 export function playerCard(player, opts = {}) {
-  const { category, compact = false } = opts;
+  const { category, categories, compact = false } = opts;
   const [primary, secondary] = player.colors;
 
   // Card art:
@@ -52,6 +55,25 @@ export function playerCard(player, opts = {}) {
     // On failure just drop the image — panel + number stay, never letters.
     photo.addEventListener('error', () => photo.remove(), { once: true });
     jerseyChildren.push(photo);
+  }
+
+  // Signature-role badge: the skill this player rates highest in (their role for
+  // synergy). Shown when the full category set is provided.
+  if (categories && categories.length) {
+    const sigId = primaryRole(player, categories);
+    const sig = categories.find((c) => c.id === sigId);
+    if (sig) {
+      jerseyChildren.push(
+        el('div', {
+          class: 'card__role',
+          attrs: { title: `Signature role: ${sig.label}` },
+          children: [
+            el('span', { class: 'card__role-icon', text: sig.icon }),
+            el('span', { class: 'card__role-label', text: sig.label }),
+          ],
+        }),
+      );
+    }
   }
 
   const jersey = el('div', {

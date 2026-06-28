@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createPool, removeFromPool, poolRemaining, isAvailable } from './pool.js';
+import { createPool, removeFromPool, returnToPool, poolRemaining, isAvailable } from './pool.js';
 import { makeRng } from '../rng.js';
 
 const ids = ['a', 'b', 'c', 'd', 'e'];
@@ -30,5 +30,20 @@ describe('pool', () => {
     const p = removeFromPool(createPool(makeRng(1).next, ids), 'c');
     expect(removeFromPool(p, 'c')).toBe(p);
     expect(removeFromPool(p, 'zzz')).toBe(p);
+  });
+
+  it('returnToPool re-adds a drained id at its order position; no-ops otherwise', () => {
+    const p0 = createPool(makeRng(1).next, ids);
+    const drained = removeFromPool(p0, 'c');
+    const restored = returnToPool(drained, 'c');
+    expect(restored.available).toContain('c');
+    expect(poolRemaining(restored)).toBe(ids.length);
+    // available stays ordered by the fixed pool order
+    const rank = (x: string) => p0.order.indexOf(x);
+    const sorted = [...restored.available].sort((a, b) => rank(a) - rank(b));
+    expect(restored.available).toEqual(sorted);
+    // already-present or unknown ids are no-ops (same reference)
+    expect(returnToPool(restored, 'c')).toBe(restored);
+    expect(returnToPool(restored, 'zzz')).toBe(restored);
   });
 });
