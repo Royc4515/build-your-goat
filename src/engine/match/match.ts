@@ -16,12 +16,13 @@ import type {
 } from '../types.js';
 import { categoriesForMode, rosterForMode } from '../../data/modes.js';
 import { scoreBuild } from '../scoring/scoring.js';
-import { makeRng, shuffle } from '../rng.js';
+import { makeRng } from '../rng.js';
+import { createPool, removeFromPool, isAvailable } from '../pool/pool.js';
 
-/** Begin a fresh match. The seed fully determines the reel order. */
+/** Begin a fresh match. The seed fully determines the draft pool order. */
 export function createMatch(config: MatchConfig): MatchState {
   const rng = makeRng(config.seed);
-  const order = shuffle(
+  const pool = createPool(
     rng.next,
     rosterForMode(config.mode).map((p) => p.id),
   );
@@ -30,7 +31,7 @@ export function createMatch(config: MatchConfig): MatchState {
     phase: 'spinning',
     round: 0,
     picks: Object.freeze({}),
-    order: Object.freeze(order),
+    pool,
     rngState: rng.state(),
     reveal: null,
   });
@@ -50,11 +51,13 @@ export function currentCategory(state: MatchState): Category | null {
 export function lockPick(state: MatchState, playerId: PlayerId): MatchState {
   const category = currentCategory(state);
   if (!category || state.reveal) return state;
+  if (!isAvailable(state.pool, playerId)) return state; // drained players can't be re-picked
 
   return Object.freeze({
     ...state,
     phase: 'reveal',
     picks: Object.freeze({ ...state.picks, [category.id]: playerId }),
+    pool: removeFromPool(state.pool, playerId),
     reveal: Object.freeze({ categoryId: category.id, playerId }),
   });
 }

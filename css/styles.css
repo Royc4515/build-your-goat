@@ -1286,3 +1286,28 @@ body {
     font-size: 5rem;
   }
 }
+
+/* --- Pool meter (M2): players left in the shared draft pool --------------- */
+.pool-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  align-self: center;
+  margin: 0.1rem auto 0;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.82);
+}
+.pool-meter__count {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent, #ffd60a);
+  font-weight: 800;
+}
+.pool-meter__total {
+  color: rgba(255, 255, 255, 0.55);
+}

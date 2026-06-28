@@ -94,13 +94,21 @@ export interface Reveal {
   readonly playerId: PlayerId;
 }
 
+/** The shared draft pool. `order` is the fixed seeded permutation of the whole
+ *  roster; `available` drains as players are locked (so the reel only ever shows
+ *  who is still pickable — the contention/denial spine of the strategic layer). */
+export interface Pool {
+  readonly order: readonly PlayerId[];
+  readonly available: readonly PlayerId[];
+}
+
 export interface MatchState {
   readonly config: MatchConfig;
   readonly phase: MatchPhase;
   readonly round: number;
   readonly picks: Readonly<Record<CategoryId, PlayerId>>;
-  /** Seeded reel order (player ids). The full roster in M1; drains in M2. */
-  readonly order: readonly PlayerId[];
+  /** Seeded draft pool; the reel cycles `pool.available`. */
+  readonly pool: Pool;
   /** Serialized PRNG counter — keeps the state pure and the match replayable. */
   readonly rngState: number;
   readonly reveal: Reveal | null;

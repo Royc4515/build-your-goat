@@ -12,6 +12,7 @@ import { currentCategory } from '../engine/match/match.js';
 import { categoriesForMode, playerForMode } from '../data/modes.js';
 import { createReel } from './reel.js';
 import { playerCard } from './playerCard.js';
+import { poolMeter } from './hud/poolMeter.js';
 import { sfx } from './sound.js';
 
 /**
@@ -38,6 +39,7 @@ export function mountPlayRound(root, state, { onLocked, onPause, onBack }) {
     children: [
       progressBar(state, [makeBackBtn(onBack), makePauseBtn(onPause)]),
       categoryBanner(category),
+      poolMeter(state.pool.available.length, state.pool.order.length),
       stage,
       lockBtn,
       slotTray(state),
@@ -48,8 +50,8 @@ export function mountPlayRound(root, state, { onLocked, onPause, onBack }) {
   const reel = createReel({
     mount: stage,
     category,
-    // Seeded reel order from the engine (deterministic; drains in M2).
-    pool: state.order.map((id) => playerForMode(state.config.mode, id)),
+    // Only the players still available in the shared pool, in seeded order.
+    pool: state.pool.available.map((id) => playerForMode(state.config.mode, id)),
     // Captured at press time; commit straight away. The reveal STATE shows it,
     // so a pause can never lose an earned pick.
     onSettled: (player) => onLocked(player.id),
