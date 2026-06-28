@@ -655,10 +655,15 @@ body {
 
 /* --- Result --------------------------------------------------------------- */
 .result {
-  gap: 16px;
+  gap: 12px;
   text-align: center;
   overflow-y: auto;
-  padding-bottom: 1.5rem;
+  padding: 0.25rem 0 1.5rem;
+  /* Hide native scrollbar — scroll still works via touch/wheel/keyboard */
+  scrollbar-width: none;
+}
+.result::-webkit-scrollbar {
+  display: none;
 }
 .result__head {
   display: flex;
@@ -755,13 +760,13 @@ body {
   /* min-width:0 lets the card shrink to its 1fr grid track instead of being
      widened by a long nowrap name's min-content (which overflowed the row). */
   min-width: 0;
-  padding: 9px 6px;
-  gap: 6px;
+  padding: 7px 5px;
+  gap: 4px;
 }
 .card--compact .jersey {
-  width: clamp(46px, 15vw, 74px);
-  height: clamp(46px, 15vw, 74px);
-  border-radius: 12px;
+  width: clamp(38px, 12vw, 58px);
+  height: clamp(38px, 12vw, 58px);
+  border-radius: 10px;
 }
 .card--compact .jersey__monogram {
   font-size: 1.8rem;
@@ -1730,7 +1735,13 @@ body {
 }
 .card--compact .card__role {
   font-size: 0.52rem;
-  padding: 0.08rem 0.35rem;
+  padding: 0.08rem 0.25rem;
+  top: auto;
+  bottom: 0.25rem;
+  left: 0.25rem;
+}
+.card--compact .card__role-label {
+  display: none;
 }
 
 /* --- UX: live pick value while spinning ---------------------------------- */
@@ -1953,4 +1964,32 @@ body {
 }
 .wt-skip:hover {
   background: rgba(0, 0, 0, 0.65);
+}
+
+/* --- M6: Hot-seat pass-device interstitial --------------------------------- */
+.pass-device {
+  justify-content: center;
+  align-items: center;
+}
+.pass-device__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+.pass-device__emoji {
+  font-size: 4rem;
+  line-height: 1;
+}
+.pass-device__title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  margin: 0;
+}
+.pass-device__hint {
+  color: var(--ink-dim);
+  font-size: 0.9rem;
+  margin: 0;
 }

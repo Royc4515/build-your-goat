@@ -22,7 +22,7 @@ import { sfx } from './sound.js';
 const AI_REVEAL_MS = 1100; // how long the CPU's pick is shown before advancing
 const AI_THINK_MS = 700; // brief pause so the CPU "taking" a pick is legible
 
-const hasOpponent = (state) => state.config.actors.includes('cpu');
+const hasOpponent = (state) => state.config.actors.length > 1;
 const humanBoard = (state) => state.boards[HUMAN] ?? {};
 
 /**
@@ -244,7 +244,7 @@ function ratingTone(v) {
  *  it's visible whether the human or the CPU won the toss). */
 function tossNote(state) {
   const humanPicked = Object.keys(state.boards[HUMAN] ?? {}).length > 0;
-  if (!hasOpponent(state) || humanPicked) return el('span', { class: 'toss-spacer' });
+  if (!hasOpponent(state) || state.config.kind === 'hotseat' || humanPicked) return el('span', { class: 'toss-spacer' });
   const youFirst = firstPicker(state) === HUMAN;
   return el('div', {
     class: ['toss-note', youFirst ? 'toss-note--me' : 'toss-note--cpu'],
@@ -256,6 +256,14 @@ function tossNote(state) {
 function turnBanner(state) {
   if (!hasOpponent(state)) return el('span', { class: 'turn-spacer' });
   const turn = currentTurn(state);
+  const isHotseat = state.config.kind === 'hotseat';
+  if (isHotseat) {
+    const isP1 = turn?.actor === HUMAN;
+    return el('div', {
+      class: ['turn-banner', isP1 ? 'turn-banner--me' : 'turn-banner--cpu'],
+      text: isP1 ? '🧑  Player 1' : '🧑‍🤝‍🧑  Player 2',
+    });
+  }
   const mine = turn?.actor === HUMAN;
   return el('div', {
     class: ['turn-banner', mine ? 'turn-banner--me' : 'turn-banner--cpu'],
@@ -263,9 +271,9 @@ function turnBanner(state) {
   });
 }
 
-/** Opponent status block (only in vs-AI). */
+/** Opponent status block (only in vs-AI; hidden in hotseat to keep boards private). */
 function opponentBlock(state) {
-  if (!hasOpponent(state)) return el('span', { class: 'opp-spacer' });
+  if (!hasOpponent(state) || state.config.kind === 'hotseat') return el('span', { class: 'opp-spacer' });
   return opponentTray(state, 'cpu', '🤖 CPU');
 }
 
@@ -323,4 +331,44 @@ function slotTray(state) {
     });
   });
   return el('div', { class: 'tray', children: slots });
+}
+
+/**
+ * Hotseat interstitial: shown between turns so each player can't see the other's pick.
+ * @returns {() => void} cleanup
+ */
+export function mountPassDevice(root, actorId, { onReady }) {
+  clear(root);
+  const isP2 = actorId === 'human2';
+  const label = isP2 ? 'Player 2' : 'Player 1';
+  const emoji = isP2 ? '🧑‍🤝‍🧑' : '🧑';
+
+  const readyBtn = el('button', {
+    class: 'btn btn--primary btn--xl',
+    text: `${emoji}  ${label} — I'm ready!`,
+    attrs: { type: 'button' },
+  });
+  readyBtn.addEventListener('click', () => {
+    sfx.click();
+    onReady();
+  });
+
+  const screen = el('section', {
+    class: 'screen play pass-device',
+    children: [
+      el('div', { class: 'pass-device__body', children: [
+        el('div', { class: 'pass-device__emoji', text: emoji }),
+        el('h2', { class: 'pass-device__title', text: `${label}'s turn` }),
+        el('p', { class: 'pass-device__hint', text: 'Pass the device — tap when ready to pick.' }),
+        readyBtn,
+      ]}),
+    ],
+  });
+  root.append(screen);
+
+  const onKey = (e) => {
+    if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); sfx.click(); onReady(); }
+  };
+  window.addEventListener('keydown', onKey);
+  return () => window.removeEventListener('keydown', onKey);
 }

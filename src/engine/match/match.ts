@@ -145,15 +145,16 @@ export function advanceAfterReveal(state: MatchState): MatchState {
  *  player returns to the pool and the turn goes back to spinning. No-op unless a
  *  reroll is available and a human pick is on the reveal screen. */
 export function useReroll(state: MatchState): MatchState {
-  if (state.phase !== 'reveal' || !state.reveal || state.reveal.actor !== HUMAN) return state;
+  if (state.phase !== 'reveal' || !state.reveal) return state;
+  const { actor, categoryId, playerId } = state.reveal;
+  if (actor === 'cpu') return state; // CPU picks cannot be undone
   if (!canReroll(state.economy)) return state;
-  const { categoryId, playerId } = state.reveal;
-  const board: Record<string, PlayerId> = { ...state.boards[HUMAN] };
+  const board: Record<string, PlayerId> = { ...state.boards[actor] };
   delete board[categoryId];
   return Object.freeze({
     ...state,
     phase: 'spinning',
-    boards: Object.freeze({ ...state.boards, [HUMAN]: Object.freeze(board) }),
+    boards: Object.freeze({ ...state.boards, [actor]: Object.freeze(board) }),
     pool: returnToPool(state.pool, playerId),
     economy: spendReroll(state.economy),
     reveal: null,

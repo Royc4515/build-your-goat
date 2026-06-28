@@ -19,11 +19,11 @@ const DIFFICULTIES = [
 
 /**
  * @param {HTMLElement} root
- * @param {{ onPick:(mode:string, opp:{vsAI:boolean,difficulty:string})=>void, onBack:()=>void }} handlers
+ * @param {{ onPick:(mode:string, opp:{vsAI:boolean,vsHotseat:boolean,difficulty:string})=>void, onBack:()=>void }} handlers
  */
 export function renderModeSelect(root, { onPick, onBack }) {
   // Local selection state; re-paints the screen when it changes.
-  const sel = { vsAI: false, difficulty: 'pro' };
+  const sel = { mode: 'solo', difficulty: 'pro' };
 
   const paint = () => {
     clear(root);
@@ -42,15 +42,16 @@ export function renderModeSelect(root, { onPick, onBack }) {
       [
         { id: 'solo', label: '🧍 Solo' },
         { id: 'vs', label: '🤖 vs CPU' },
+        { id: '2p', label: '🧑‍🤝‍🧑 2 Players' },
       ],
-      sel.vsAI ? 'vs' : 'solo',
+      sel.mode,
       (id) => {
-        sel.vsAI = id === 'vs';
+        sel.mode = id;
         paint();
       },
     );
 
-    const difficulty = sel.vsAI
+    const difficulty = sel.mode === 'vs'
       ? el('div', {
           class: 'opp-config',
           children: [
@@ -65,10 +66,10 @@ export function renderModeSelect(root, { onPick, onBack }) {
 
     const modeCard = (id) => {
       const m = MODES[id];
-      const disabled = sel.vsAI && !supportsActors(id, 2);
+      const disabled = (sel.mode === 'vs' || sel.mode === '2p') && !supportsActors(id, 2);
       const card = el('button', {
         class: ['mode-card', disabled ? 'mode-card--disabled' : ''],
-        attrs: { type: 'button', ...(disabled ? { title: 'Roster too small for vs CPU' } : {}) },
+        attrs: { type: 'button', ...(disabled ? { title: 'Roster too small for multiplayer' } : {}) },
         children: [
           el('span', { class: 'mode-card__icon', text: m.icon }),
           el('span', { class: 'mode-card__label', text: m.label }),
@@ -80,7 +81,7 @@ export function renderModeSelect(root, { onPick, onBack }) {
       if (!disabled) {
         card.addEventListener('click', () => {
           sfx.click();
-          onPick(id, { vsAI: sel.vsAI, difficulty: sel.difficulty });
+          onPick(id, { vsAI: sel.mode === 'vs', vsHotseat: sel.mode === '2p', difficulty: sel.difficulty });
         });
       }
       return card;
