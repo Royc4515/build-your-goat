@@ -41,3 +41,67 @@ export interface Mode {
   readonly label: string;
   readonly live: boolean;
 }
+
+// --- scoring -----------------------------------------------------------------
+
+/** A rating tier the final overall falls into. */
+export interface Tier {
+  readonly label: string;
+  readonly emoji: string;
+  readonly blurb: string;
+}
+
+/** One scored slot of a completed build: the player picked for a category and
+ *  their rating in that specific category. */
+export interface ScoredSlot {
+  readonly categoryId: CategoryId;
+  readonly label: string;
+  readonly icon: string;
+  readonly accent: string;
+  readonly playerId: PlayerId;
+  readonly score: number;
+}
+
+/** The full result of scoring a completed build. */
+export interface BuildResult {
+  readonly slots: readonly ScoredSlot[];
+  readonly base: number;
+  readonly chemistry: number;
+  readonly overall: number;
+  readonly tier: Tier;
+  readonly badges: readonly string[];
+}
+
+// --- match -------------------------------------------------------------------
+
+/** How a match is being played. Solo today; the rest arrive in later milestones,
+ *  but they share this one state machine (only setup + opponents differ). */
+export type MatchKind = 'solo' | 'vsAI' | 'hotseat' | 'daily';
+
+/** Phase WITHIN a match (distinct from app-level screen navigation). */
+export type MatchPhase = 'spinning' | 'reveal' | 'result';
+
+export interface MatchConfig {
+  readonly kind: MatchKind;
+  readonly mode: ModeId;
+  /** Deterministic seed: dailySeed(date) for daily; host entropy otherwise. */
+  readonly seed: number;
+}
+
+/** A pick captured but not yet confirmed (shown on the reveal screen). */
+export interface Reveal {
+  readonly categoryId: CategoryId;
+  readonly playerId: PlayerId;
+}
+
+export interface MatchState {
+  readonly config: MatchConfig;
+  readonly phase: MatchPhase;
+  readonly round: number;
+  readonly picks: Readonly<Record<CategoryId, PlayerId>>;
+  /** Seeded reel order (player ids). The full roster in M1; drains in M2. */
+  readonly order: readonly PlayerId[];
+  /** Serialized PRNG counter — keeps the state pure and the match replayable. */
+  readonly rngState: number;
+  readonly reveal: Reveal | null;
+}

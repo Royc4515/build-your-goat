@@ -5,7 +5,7 @@
 import { el, clear } from './dom.js';
 import { playerCard } from './playerCard.js';
 import { MODES, categoriesForMode, playerForMode } from '../data/modes.js';
-import { scoreBuild } from '../core/rating.js';
+import { scoreBuild } from '../engine/scoring/scoring.js';
 import { sfx } from './sound.js';
 
 /** Title screen. */

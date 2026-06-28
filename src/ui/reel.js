@@ -5,7 +5,6 @@
 
 import { clear } from './dom.js';
 import { playerCard } from './playerCard.js';
-import { shuffle } from '../core/random.js';
 import { sfx } from './sound.js';
 import { getSetting } from '../core/settings.js';
 
@@ -23,7 +22,9 @@ const SPIN_MS_BY_SPEED = { chill: 320, normal: 190, hyper: 115 };
  * @returns {{ lock:()=>void, destroy:()=>void, isLocking:()=>boolean }}
  */
 export function createReel({ mount, category, pool, onSettled }) {
-  const order = shuffle(pool);
+  // `pool` is already in the engine's seeded order — cycle it as given so the
+  // reel sequence is deterministic (no Math.random here).
+  const order = pool;
   const spinMs = SPIN_MS_BY_SPEED[getSetting('reelSpeed')] ?? SPIN_MS_BY_SPEED.normal;
   const animate = getSetting('spinFx') !== false;
   const slideMs = spinMs; // spans the full tick → one continuous, constant-speed stream
