@@ -1,17 +1,21 @@
-// First-time interactive walkthrough. Instead of a wall of text, it renders a
-// realistic (but static) play screen — a "fake real game" — and guides the
-// player through it with spotlight coach-marks pointing at each piece of the HUD.
+// First-time tutorial: welcome slides then a real guided game vs an easy CPU.
+// The user plays the actual game mechanics while hints float at the bottom.
 // Self-contained: mounts a full-screen overlay to <body>, cleans up on finish.
 
-import { el } from './dom.js';
+import { el, clear } from './dom.js';
 import { sfx } from './sound.js';
-import { createMatch, lockPick, advanceAfterReveal, currentCategory } from '../engine/match/match.js';
-import { categoriesForMode, playerForMode } from '../data/modes.js';
-import { playerCard } from './playerCard.js';
-import { poolMeter } from './hud/poolMeter.js';
-import { powerUps } from './hud/powerUps.js';
-import { buildProjection } from './hud/buildProjection.js';
-import { rolesTracker } from './hud/rolesTracker.js';
+import {
+  createMatch,
+  lockPick,
+  advanceAfterReveal,
+  resolveAITurn,
+  isComplete,
+  useFreeze,
+  useReroll,
+} from '../engine/match/match.js';
+import { mountPlayRound, mountReveal, mountAIThinking } from './playScreen.js';
+import { renderResult } from './screens.js';
+import { policyFor } from '../engine/ai/policy.js';
 import { fitScreen } from './fit.js';
 
 const SEEN_KEY = 'byg:tutorialSeen';
@@ -28,200 +32,242 @@ export function markTutorialSeen() {
   try {
     localStorage.setItem(SEEN_KEY, '1');
   } catch {
-    /* ignore */
+    /* noop */
   }
 }
 
-// Coach-mark steps: a selector into the demo screen + the copy to show.
-const STEPS = [
-  ['.cat-banner', '🏀 One skill at a time', "Each round you fill ONE of six skills. Right now it's Scoring."],
-  ['.reel-stage .card__role', '⭐ Signature role', "Every player's badge shows their best skill — that's their role for team synergy."],
-  ['.live-value', '🎯 Time your lock', 'Faces spin by fast. This big number is the on-screen player’s rating in the current skill — aim for a high one.'],
-  ['.btn--lock', '🔒 Lock it in', 'Tap LOCK IN (or press Space) to grab whoever is on screen at that instant. Timing is the skill.'],
-  ['.pool-meter', '🃏 Shared pool', 'Locked players leave the pool for good. In vs-CPU you can snipe a star before your opponent gets him.'],
-  ['.powerups', '🔄 Power-ups', 'Freeze slows the reel for a precise lock. After you lock, Redo undoes the pick and re-spins that slot.'],
-  ['.roles-tracker', '🏆 Cover the roles', 'Covering many DIFFERENT signature roles multiplies your score; roles no one covers cap it.'],
-  ['.projection', '📈 Your projection', 'Your projected overall updates with every pick. Chase a perfect 99 and the GOAT tier!'],
+// ── Welcome slides ──────────────────────────────────────────────────────────
+
+const SLIDES = [
+  {
+    icon: '🐐',
+    title: 'Welcome to Build Your GOAT!',
+    body: 'Assemble a 6-player dream team. Each slot covers a different skill — Scoring, Playmaking, Defense, and more. Your picks combine into one Overall rating out of 99.',
+  },
+  {
+    icon: '🎰',
+    title: 'Spin & Lock',
+    body: "Player faces fly across the screen. The big number is their rating in the current skill. Tap LOCK IN the moment a high-rated player appears — timing is the skill.",
+  },
+  {
+    icon: '🤖',
+    title: 'Draft vs the CPU',
+    body: "You and the CPU take turns picking. Once anyone locks a player they're gone from the shared pool. Snipe stars before the bot does — and cover more roles for a synergy bonus!",
+  },
 ];
 
-/** Build a realistic mid-round solo state to render behind the coach-marks. */
-function demoState() {
-  let s = createMatch({ kind: 'solo', mode: 'nba-legends', seed: 246813, actors: ['human'] });
-  // Lock two picks so the projection, roles tracker and pool meter look "live".
-  s = advanceAfterReveal(lockPick(s, s.pool.available[0]));
-  s = advanceAfterReveal(lockPick(s, s.pool.available[0]));
-  return s;
+// ── Contextual hints ─────────────────────────────────────────────────────────
+
+function hint(title, body) {
+  return { title, body };
 }
 
-/** Compose a static, non-interactive play screen from the real components. */
-function demoScreen(state) {
-  const mode = state.config.mode;
-  const category = currentCategory(state);
-  const categories = categoriesForMode(mode);
-  const candidate = playerForMode(mode, state.pool.available[0]);
+function hintFor(state) {
+  const humanDone = Object.keys(state.boards?.human ?? {}).length;
 
-  const card = playerCard(candidate, { category, categories });
-  card.classList.add('reel-card');
-  const stage = el('div', { class: 'reel-stage', children: [card] });
+  if (state.phase === 'aiThinking') {
+    return hint('🤖 CPU is thinking…', "The bot is choosing. You're competing for the same pool — whatever it locks is gone.");
+  }
+  if (state.reveal?.actor === 'cpu') {
+    return hint('🤖 CPU picked!', 'See what it drafted in the opponent tray. Your pick is next.');
+  }
+  if (state.reveal?.actor === 'human') {
+    if (humanDone === 1) {
+      return hint('✅ First pick!', "Nice! Watch the Roles Tracker — covering DIFFERENT signature roles multiplies your score.");
+    }
+    if (humanDone === 3) {
+      return hint('🔄 Redo tip', "Changed your mind? Tap Redo on the reveal to un-pick and re-spin that slot. It costs a charge.");
+    }
+    return hint('✅ Locked in!', 'Tap Continue to move on. Your Overall projection updates with every pick.');
+  }
 
-  const banner = el('div', {
-    class: 'cat-banner',
-    children: [
-      el('span', { class: 'cat-banner__icon', text: category.icon }),
-      el('div', {
-        children: [
-          el('div', { class: 'cat-banner__label', text: category.label }),
-          el('div', { class: 'cat-banner__tag', text: category.tagline }),
-        ],
-      }),
-    ],
-  });
-
-  const liveValue = el('div', {
-    class: 'live-value',
-    children: [
-      el('span', { class: 'live-value__cap', text: `${category.icon} ${category.label}` }),
-      el('span', { class: 'live-value__num tone--great', text: String(candidate.attrs[category.id] ?? 0) }),
-    ],
-  });
-
-  const lockBtn = el('button', { class: 'btn btn--lock', text: '🔒  LOCK IN', attrs: { type: 'button' } });
-
-  const screen = el('section', {
-    class: 'screen play wt-demo',
-    style: { '--accent': category.accent },
-    children: [
-      banner,
-      poolMeter(state.pool.available.length, state.pool.order.length),
-      stage,
-      liveValue,
-      lockBtn,
-      powerUps({ economy: state.economy, frozen: false, allowFreeze: true }),
-      buildProjection(state),
-      rolesTracker(state),
-    ],
-  });
-  return screen;
+  // Human spinning
+  if (humanDone === 0) {
+    return hint('🎯 Your first pick!', "The reel is spinning — that big number is the player's rating. Tap 🔒 LOCK IN when you see a high one!");
+  }
+  if (humanDone === 1) {
+    return hint('🔄 Mix your roles', "Each player card shows a Signature Role badge. Picking DIFFERENT roles gives a synergy multiplier — diversify!");
+  }
+  if (humanDone === 2) {
+    return hint('❄️ Try Freeze!', "Tap Freeze to slow the reel for a precise lock. Limited charges — use them on the skills you care most about.");
+  }
+  if (humanDone === 4) {
+    return hint('🐐 Last pick!', "One slot left. Check the Projection — can you hit a high OVR? Make it count!");
+  }
+  return hint(`🏀 Pick ${humanDone + 1} of 6`, 'Keep building! Different signature roles = higher synergy bonus.');
 }
+
+// ── Main export ───────────────────────────────────────────────────────────────
 
 export function openTutorial(onClose) {
   sfx.click();
 
-  const screen = demoScreen(demoState());
-  const stageWrap = el('div', { class: 'wt-stage', children: [screen] });
-
-  const spotlight = el('div', { class: 'wt-spotlight' });
-  const tipTitle = el('div', { class: 'wt-tip__title' });
-  const tipText = el('div', { class: 'wt-tip__text' });
-  const tipStepNo = el('span', { class: 'wt-tip__step' });
-  const backBtn = el('button', { class: 'btn btn--ghost wt-tip__btn', text: 'Back', attrs: { type: 'button' } });
-  const nextBtn = el('button', { class: 'btn btn--primary wt-tip__btn', text: 'Next', attrs: { type: 'button' } });
-  const skipBtn = el('button', { class: 'wt-skip', text: 'Skip ✕', attrs: { type: 'button' } });
-  const tip = el('div', {
-    class: 'wt-tip',
-    attrs: { role: 'dialog', 'aria-modal': 'true' },
-    children: [
-      tipStepNo,
-      tipTitle,
-      tipText,
-      el('div', { class: 'wt-tip__actions', children: [backBtn, nextBtn] }),
-    ],
+  // Shell
+  const gameRoot = el('div', { class: 'wt-game' });
+  const hintTitle = el('p', { class: 'wt-hint__title' });
+  const hintBody = el('p', { class: 'wt-hint__body' });
+  const hintBox = el('div', { class: 'wt-hint', children: [hintTitle, hintBody] });
+  const skipBtn = el('button', {
+    class: 'wt-skip',
+    text: 'Skip ✕',
+    attrs: { type: 'button' },
   });
 
   const overlay = el('div', {
-    class: 'walkthrough',
-    children: [stageWrap, spotlight, tip, skipBtn],
+    class: 'walkthrough wt-guided',
+    children: [gameRoot, hintBox, skipBtn],
   });
   document.body.append(overlay);
-  fitScreen(screen);
 
-  let i = 0;
-
-  const place = () => {
-    const [selector] = STEPS[i];
-    const target = screen.querySelector(selector) ?? screen;
-    const r = target.getBoundingClientRect();
-    const pad = 8;
-    Object.assign(spotlight.style, {
-      left: `${r.left - pad}px`,
-      top: `${r.top - pad}px`,
-      width: `${r.width + pad * 2}px`,
-      height: `${r.height + pad * 2}px`,
-    });
-    // Tooltip: below the target if there's room, else above.
-    const below = r.bottom + 12;
-    const above = r.top - 12;
-    const preferBelow = below < window.innerHeight - 180;
-    tip.style.left = `${Math.max(12, Math.min(window.innerWidth - 332, r.left + r.width / 2 - 160))}px`;
-    if (preferBelow) {
-      tip.style.top = `${below}px`;
-      tip.style.bottom = 'auto';
-    } else {
-      tip.style.top = 'auto';
-      tip.style.bottom = `${window.innerHeight - above}px`;
-    }
-  };
-
-  const render = () => {
-    const [, title, text] = STEPS[i];
-    tipStepNo.textContent = `Step ${i + 1} of ${STEPS.length}`;
-    tipTitle.textContent = title;
-    tipText.textContent = text;
-    backBtn.style.visibility = i === 0 ? 'hidden' : 'visible';
-    nextBtn.textContent = i === STEPS.length - 1 ? "Got it — let's play!" : 'Next';
-    place();
-  };
+  let teardownRound = null;
+  let done = false;
 
   const finish = () => {
-    window.removeEventListener('keydown', onKey);
-    window.removeEventListener('resize', onResize);
+    if (done) return;
+    done = true;
+    if (teardownRound) {
+      teardownRound();
+      teardownRound = null;
+    }
     overlay.remove();
     markTutorialSeen();
     if (onClose) onClose();
   };
 
-  const next = () => {
-    if (i >= STEPS.length - 1) {
-      finish();
-      return;
-    }
-    sfx.click();
-    i += 1;
-    render();
-  };
-  const back = () => {
-    if (i === 0) return;
-    sfx.click();
-    i -= 1;
-    render();
-  };
-
-  const onKey = (e) => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      finish();
-    } else if (e.key === 'ArrowRight' || e.key === 'Enter') {
-      e.preventDefault();
-      next();
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      back();
-    }
-  };
-  const onResize = () => {
-    fitScreen(screen);
-    place();
-  };
-
-  nextBtn.addEventListener('click', next);
-  backBtn.addEventListener('click', back);
   skipBtn.addEventListener('click', () => {
     sfx.click();
     finish();
   });
-  window.addEventListener('keydown', onKey);
-  window.addEventListener('resize', onResize);
 
-  // Defer first placement one frame so layout + fit have settled.
-  requestAnimationFrame(render);
+  // ── Slides ──────────────────────────────────────────────────────────────────
+
+  let slideIdx = 0;
+  const slideIcon = el('div', { class: 'wt-slide__icon' });
+  const slideTitle = el('h2', { class: 'wt-slide__title' });
+  const slideBody = el('p', { class: 'wt-slide__body' });
+  const dots = SLIDES.map(() => el('span', { class: 'wt-dot' }));
+  const backBtn = el('button', { class: 'btn btn--ghost', text: '← Back', attrs: { type: 'button' } });
+  const nextBtn = el('button', { class: 'btn btn--primary', text: 'Next →', attrs: { type: 'button' } });
+
+  const renderSlide = () => {
+    const s = SLIDES[slideIdx];
+    slideIcon.textContent = s.icon;
+    slideTitle.textContent = s.title;
+    slideBody.textContent = s.body;
+    dots.forEach((d, i) => {
+      d.className = 'wt-dot' + (i === slideIdx ? ' wt-dot--active' : '');
+    });
+    backBtn.style.visibility = slideIdx === 0 ? 'hidden' : 'visible';
+    nextBtn.textContent = slideIdx === SLIDES.length - 1 ? "Let's Play! 🏀" : 'Next →';
+  };
+
+  nextBtn.addEventListener('click', () => {
+    sfx.click();
+    if (slideIdx < SLIDES.length - 1) {
+      slideIdx++;
+      renderSlide();
+    } else {
+      startGame();
+    }
+  });
+  backBtn.addEventListener('click', () => {
+    if (slideIdx > 0) {
+      sfx.click();
+      slideIdx--;
+      renderSlide();
+    }
+  });
+
+  gameRoot.append(
+    el('div', {
+      class: 'wt-slides',
+      children: [
+        slideIcon,
+        slideTitle,
+        slideBody,
+        el('div', { class: 'wt-dots', children: dots }),
+        el('div', { class: 'wt-slide__actions', children: [backBtn, nextBtn] }),
+      ],
+    })
+  );
+  renderSlide();
+
+  // ── Live guided game ─────────────────────────────────────────────────────────
+
+  function startGame() {
+    clear(gameRoot);
+    gameRoot.classList.add('wt-game--playing');
+    hintBox.classList.add('wt-hint--visible');
+
+    let state = createMatch({
+      kind: 'vsAI',
+      mode: 'nba-legends',
+      seed: 54321,
+      actors: ['human', 'cpu'],
+      policy: policyFor('rookie'),
+    });
+
+    const setHint = ({ title, body }) => {
+      hintTitle.textContent = title;
+      hintBody.textContent = body;
+    };
+
+    const step = (nextState) => {
+      state = nextState;
+      if (teardownRound) {
+        teardownRound();
+        teardownRound = null;
+      }
+
+      if (isComplete(state)) {
+        setHint(hint('🐐 You built your GOAT!', "That's your Overall rating! Synergy from different roles boosted your score."));
+        renderResult(gameRoot, {
+          state,
+          onPlayAgain: finish,
+          onChangeMode: finish,
+        });
+        // Promote hint box into a CTA
+        const playBtn = el('button', {
+          class: 'btn btn--primary',
+          text: '🐐 Play for Real!',
+          attrs: { type: 'button' },
+        });
+        playBtn.addEventListener('click', () => {
+          sfx.click();
+          finish();
+        });
+        hintBox.append(playBtn);
+        hintBox.style.pointerEvents = 'auto';
+        fitScreen(gameRoot.querySelector('.screen'));
+        return;
+      }
+
+      setHint(hintFor(state));
+
+      if (state.phase === 'aiThinking') {
+        teardownRound = mountAIThinking(gameRoot, state, {
+          onResolved: () => step(resolveAITurn(state)),
+          onPause: () => {},
+          onBack: finish,
+        });
+      } else if (state.reveal) {
+        teardownRound = mountReveal(gameRoot, state, {
+          onAdvance: () => step(advanceAfterReveal(state)),
+          onPause: () => {},
+          onBack: finish,
+          onReroll: () => step(useReroll(state)),
+        });
+      } else {
+        teardownRound = mountPlayRound(gameRoot, state, {
+          onLocked: (id) => step(lockPick(state, id)),
+          onPause: () => {},
+          onBack: finish,
+          onFreeze: () => step(useFreeze(state)),
+        });
+      }
+      fitScreen(gameRoot.querySelector('.screen'));
+    };
+
+    step(state);
+  }
 }

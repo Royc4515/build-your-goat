@@ -1812,78 +1812,134 @@ body {
   opacity: 0.92;
 }
 
-/* --- UX: interactive walkthrough (coach-marks over a demo play screen) ---- */
+/* --- Tutorial: welcome slides + live guided game ─────────────────────────── */
 .walkthrough {
   position: fixed;
   inset: 0;
   z-index: 100;
   overflow: hidden;
 }
-.wt-stage {
-  position: absolute;
-  inset: 0;
-  padding: 4.2rem 0.6rem 0.6rem;
-  display: block;
+
+/* Guided mode fills the overlay with the real game + a floating hint */
+.wt-guided {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  background: rgba(4, 6, 16, 0.92);
 }
-/* The demo play screen is for show only — clicks go to the coach-marks. */
-.wt-demo {
-  pointer-events: none;
-  margin: 0 auto;
+
+/* Game container — sized by fitScreen via padding-bottom */
+.wt-game {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
 }
-.wt-spotlight {
-  position: fixed;
-  border-radius: 14px;
-  border: 2px solid var(--accent, #ffd60a);
-  box-shadow: 0 0 0 9999px rgba(4, 6, 16, 0.78);
-  pointer-events: none;
-  z-index: 1;
-  transition:
-    left 0.22s ease,
-    top 0.22s ease,
-    width 0.22s ease,
-    height 0.22s ease;
+.wt-game--playing {
+  padding-bottom: 96px; /* room for hint bubble */
+  justify-content: flex-start;
 }
-.wt-tip {
-  position: fixed;
-  z-index: 2;
-  width: 320px;
-  max-width: 92vw;
+
+/* Welcome slides card */
+.wt-slides {
   background: #121833;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 16px;
-  padding: 0.9rem 1rem 1rem;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 2rem 1.75rem 1.5rem;
+  max-width: 400px;
+  width: 88%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  text-align: center;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7);
 }
-.wt-tip__step {
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
+.wt-slide__icon {
+  font-size: 3rem;
+  line-height: 1;
 }
-.wt-tip__title {
+.wt-slide__title {
+  font-size: 1.2rem;
   font-weight: 900;
-  font-size: 1.1rem;
-  margin: 0.15rem 0 0.3rem;
+  margin: 0;
 }
-.wt-tip__text {
-  font-size: 0.85rem;
-  line-height: 1.4;
+.wt-slide__body {
+  font-size: 0.88rem;
+  line-height: 1.5;
   color: rgba(255, 255, 255, 0.8);
+  margin: 0;
 }
-.wt-tip__actions {
+.wt-dots {
+  display: flex;
+  gap: 0.4rem;
+}
+.wt-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  transition: background 0.2s;
+}
+.wt-dot--active {
+  background: var(--accent, #ffd60a);
+}
+.wt-slide__actions {
   display: flex;
   gap: 0.5rem;
-  margin-top: 0.8rem;
+  width: 100%;
+  margin-top: 0.25rem;
 }
-.wt-tip__btn {
+.wt-slide__actions .btn {
   flex: 1;
 }
+
+/* Floating hint bubble — sits at the bottom of the overlay */
+.wt-hint {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(360px, 94vw);
+  background: #121833;
+  border: 1px solid rgba(255, 214, 10, 0.4);
+  border-radius: 14px;
+  padding: 0.75rem 1rem 0.8rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  display: none;
+  pointer-events: none;
+  z-index: 10;
+}
+.wt-hint--visible {
+  display: block;
+}
+.wt-hint__title {
+  font-weight: 900;
+  font-size: 0.92rem;
+  color: #ffd60a;
+  margin: 0 0 0.2rem;
+}
+.wt-hint__body {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 0;
+}
+/* When the game is done the hint box gets a CTA button appended */
+.wt-hint .btn {
+  margin-top: 0.65rem;
+  width: 100%;
+}
+
+/* Skip button (top-right corner of the overlay) */
 .wt-skip {
-  position: fixed;
+  position: absolute;
   top: 0.8rem;
   right: 0.8rem;
-  z-index: 3;
+  z-index: 20;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(0, 0, 0, 0.4);
   color: rgba(255, 255, 255, 0.85);
@@ -1892,4 +1948,7 @@ body {
   padding: 0.3rem 0.7rem;
   border-radius: 999px;
   cursor: pointer;
+}
+.wt-skip:hover {
+  background: rgba(0, 0, 0, 0.65);
 }
