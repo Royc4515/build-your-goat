@@ -31,6 +31,9 @@ export interface Player {
   readonly colors: readonly [string, string];
   readonly attrs: Readonly<Record<CategoryId, number>>;
   readonly nbaId: number | null;
+  /** Wikimedia Commons file name for non-NBA players (soccer/EuroLeague); null
+   *  when the player has no free photo and falls back to CSS jersey art. */
+  readonly photo: string | null;
 }
 
 /** A game mode: a sport, a category set, and the roster it draws from. */

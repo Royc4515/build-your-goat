@@ -3,7 +3,7 @@
 // so there are no image files to load or break.
 
 import { el } from './dom.js';
-import { headshotUrl } from '../data/headshots.js';
+import { headshotUrl, hasHeadshot } from '../data/headshots.js';
 import { getSetting } from '../core/settings.js';
 
 /** Map a 0-99 rating to a label tier for color coding. */
@@ -27,12 +27,11 @@ export function playerCard(player, opts = {}) {
   const [primary, secondary] = player.colors;
 
   // Card art:
-  //  - Photo: real headshot, NO monogram letters. Only players with an `nbaId`
-  //    (NBA modes) have a photo source; soccer/EuroLeague players have none and
-  //    always use the jersey art below.
+  //  - Photo: real headshot, NO monogram letters. A player has a photo when it
+  //    carries an `nbaId` (NBA CDN) or a `photo` Commons file (soccer/EuroLeague).
   //  - Jersey art: CSS panel with the player's monogram letters. Used for the
-  //    'jerseys' setting, and for every player without a photo id.
-  const useJerseys = getSetting('cardArt') === 'jerseys' || !player.nbaId;
+  //    'jerseys' setting, and for any player without a photo source.
+  const useJerseys = getSetting('cardArt') === 'jerseys' || !hasHeadshot(player);
   const number = el('span', { class: 'jersey__number', text: `#${player.number}` });
   const jerseyChildren = [number];
 

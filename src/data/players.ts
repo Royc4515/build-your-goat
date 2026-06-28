@@ -99,5 +99,6 @@ function mk(
     colors: Object.freeze(colors) as readonly [string, string],
     attrs: Object.freeze(attrs),
     nbaId,
+    photo: null, // NBA legends use the NBA CDN (nbaId); no Commons photo
   });
 }

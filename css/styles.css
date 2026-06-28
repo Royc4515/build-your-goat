@@ -1151,6 +1151,144 @@ body {
   animation: none;
 }
 
+/* --- Intro secondary actions (Settings + Share side by side) -------------- */
+.intro__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* --- Share sheet ---------------------------------------------------------- */
+.share {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(7, 10, 20, 0.72);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  overflow-y: auto;
+  animation: pause-fade 0.2s ease both;
+}
+.share__panel {
+  width: 100%;
+  max-width: 360px;
+  margin: auto;
+}
+.share__card {
+  position: relative;
+  background: linear-gradient(180deg, var(--card-2), var(--card));
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 24px 20px 20px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: pause-pop 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.share__close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--ink-dim);
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.share__close:hover {
+  background: var(--card-2);
+  color: var(--ink);
+}
+.share__title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  letter-spacing: 0.02em;
+}
+.share__preview {
+  white-space: pre-line;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink-dim);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  max-height: 168px;
+  overflow-y: auto;
+}
+.share__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.share__net {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+.share__net:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+.share__net:active {
+  transform: translateY(1px) scale(0.99);
+}
+.share__net-icon {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+  background: #444;
+}
+.share__net-label {
+  font-size: 0.78rem;
+}
+.share__net--x .share__net-icon {
+  background: #000;
+}
+.share__net--whatsapp .share__net-icon {
+  background: #25d366;
+}
+.share__net--telegram .share__net-icon {
+  background: #229ed9;
+}
+.share__net--facebook .share__net-icon {
+  background: #1877f2;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+.share__net--reddit .share__net-icon {
+  background: #ff4500;
+}
+
 /* --- Motion preferences --------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   *,

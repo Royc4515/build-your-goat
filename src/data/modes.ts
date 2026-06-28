@@ -2,9 +2,10 @@
 // Build Your GOAT — mode data: every game mode's sport, category set, roster.
 // ROSTERS[mode] -> Player[]; MODES[mode] declares sport + category set + label.
 //
-// PHOTOS: only NBA players carry an `nbaId` (real headshot CDN). Soccer +
-// EuroLeague players have none, so their cards fall back to the CSS jersey/
-// monogram art automatically (see playerCard) — nothing breaks.
+// PHOTOS: NBA players carry an `nbaId` (NBA headshot CDN); soccer + EuroLeague
+// players carry a `photo` (Wikimedia Commons file, see the PHOTOS map below) so
+// every roster shows real faces. Anyone still missing a photo falls back to the
+// CSS jersey/monogram art automatically (see playerCard) — nothing breaks.
 // ============================================================================
 
 import type { Player, Category, Mode, ModeId, PlayerId, CategoryId } from '../engine/types.js';
@@ -25,7 +26,103 @@ function scat(id: string, label: string, icon: string, tagline: string, accent: 
   return Object.freeze({ id, label, icon, tagline, accent });
 }
 
+// --- headshot photos (Wikimedia Commons file names), keyed by player id ------
+// Non-NBA players have no NBA CDN id, so they carry a Commons file name instead
+// (served via Special:FilePath in headshotUrl). Every entry below was verified
+// to resolve to that exact person's Wikipedia infobox photo. Ids missing here
+// (e.g. NBA players, who use nbaId, or anyone without a free photo) fall back to
+// the CSS jersey art automatically. Duplicate people across rosters (Messi in
+// soccer-current AND soccer-mondial-2026, etc.) share the same file.
+const PHOTOS: Readonly<Record<string, string>> = Object.freeze({
+  // EuroLeague — legends
+  saras: 'Šarūnas Jasikevičius Fenerbahçe Basketbol TBSL 20250517 (2).jpg',
+  diamantidis: 'Diamantidis 11052013.JPG',
+  papaloukas: 'Papaloukas2011g.jpg',
+  navarro: 'Juan Carlos Navarro by Augustas Didzgalvis.jpg',
+  spanoulis: 'Vasileios Spanoulis AS Monaco Basket EuroLeague 20241212 (3) (cropped).jpg',
+  bodiroga: 'Dejan Bodiroga 2006.jpg',
+  vujcic: 'Nikola Maccabi (cropped).JPG',
+  parker: 'Anthony Parker Cavs2.jpg',
+  'sabonis-a': 'Arvydas Sabonis.jpg',
+  siskauskas: 'Ramūnas Šiškauskas at all-star PBL game 2011.JPG',
+  brody: 'TalBrody.JPG',
+  berkowitz: 'Micky Berkowitz.jpg',
+  // EuroLeague — current
+  nunn: 'Kendrick Nunn 25 Panathinaikos BC Euroleague 20251216 (7).jpg',
+  mjames: 'Mike James (basketball, born 1990) 55 AS Monaco Basket EuroLeague 20241212 (6) (cropped).jpg',
+  mirotic: '2022-03-22 ALBA Berlin gegen FC Barcelona Bàsquet (EuroLeague 2021-22) by Sandro Halank–014.jpg',
+  vezenkov: 'Sasha Vezenkov 14 Olympiacos BC Euroleague 20260106 (3).jpg',
+  walker: 'Lonnie Walker 1 BC Žalgiris EuroLeague 20250117 (2).jpg',
+  // NBA — current (rookies with no NBA CDN id yet, so a Commons photo)
+  flagg: 'Duke at UNC, Mar 2025, Flagg.jpg',
+  saraf: '2025-05-21 ALBA Berlin gegen ratiopharm Ulm (Basketball-Bundesliga 2024-25) by Sandro Halank–022.jpg',
+  blatt: '2022-06-17 ALBA Berlin gegen FC Bayern München (Basketball-Bundesliga 2021-22) by Sandro Halank–037.jpg',
+  campazzo: 'Facundo Campazzo 7 Real Madrid Baloncesto Euroleague 20250206 (6) (cropped).jpg',
+  tavares: 'Edy Tavares 22 Real Madrid Baloncesto Euroleague 20250206 (5).jpg',
+  larkin: 'Shane Larkin 0 Anadolu Efes TBSL 20250105 (1).jpg',
+  osman: 'Cedi Osman 6 Panathinaikos BC Euroleague 20251216 (9).jpg',
+  // Soccer — legends
+  pele: 'Pele con brasil (cropped).jpg',
+  maradona: 'Argentina celebrando copa (cropped).jpg',
+  cruyff: 'Johan Cruijff (1974).jpg',
+  beckenbauer: 'Franz Beckenbauer (1975).jpg',
+  zidane: 'Zinedine Zidane by Tasnim 03.jpg',
+  r9: 'Ronaldo Luís Nazário de Lima 2019 (3x4 cropped).jpg',
+  ronaldinho: '2019 - Press conferences - Day 1 ENX 6950 (49019873887) (cropped).jpg',
+  diStefano: 'Di Stefano 1959.jpg',
+  maldini: 'Paolo Maldini AC Milan Technical director 2018.jpg',
+  platini: 'Michel Platini 2010 (cropped).jpg',
+  baresi: 'Franco Baresi 2012.jpg',
+  rcarlos: 'LS3 1288 (53332367864) (cropped).jpg',
+  'messi-l': 'Lionel Messi NE Revolution Inter Miami 7.9.25-178 (cropped 2).jpg',
+  'cr7-l': 'Cristiano Ronaldo 2275 (cropped).jpg',
+  // Soccer — current
+  messi: 'Lionel Messi NE Revolution Inter Miami 7.9.25-178 (cropped 2).jpg',
+  mbappe: 'Kylian Mbappe France v Senegal 16 June 2026-391 (cropped).jpg',
+  haaland: 'Erling Haaland Morocco v Norway 7 June 2026-51.jpg',
+  bellingham: '25th Laureus World Sports Awards - Red Carpet - Jude Bellingham - 240422 190551-2 (cropped).jpg',
+  vini: 'Vinícius Júnior Brazil V Morocco 13 June 2026-207 (cropped).jpg',
+  yamal: 'Lamine Yamal a Xina (2025).png',
+  pedri: 'Pedri.jpg',
+  kane: 'The Prime Minister at St George\'s Park with Gareth Southgate on October 10, 2023 (Harry Kane).jpg',
+  salah: 'Mohamed Salah 2018.jpg',
+  hakimi: 'Achraf Hakimi Morocco v Norway 7 June 2026-16.jpg',
+  rodri: 'RODRI - SWE vs ESP - UEFA EURO 2020 QUALIFIERS - 2019.10.15 (cropped).jpg',
+  dembele: 'Ousmane Dembele France v Senegal 16 June 2026-341 (cropped).jpg',
+  saliba: 'William Saliba France v Senegal 16 June 2026-336 (cropped).jpg',
+  cr7: 'Cristiano Ronaldo 2275 (cropped).jpg',
+  // Soccer — Mondial 2026
+  'm-messi': 'Lionel Messi NE Revolution Inter Miami 7.9.25-178 (cropped 2).jpg',
+  'm-mbappe': 'Kylian Mbappe France v Senegal 16 June 2026-391 (cropped).jpg',
+  'm-haaland': 'Erling Haaland Morocco v Norway 7 June 2026-51.jpg',
+  'm-bellingham': '25th Laureus World Sports Awards - Red Carpet - Jude Bellingham - 240422 190551-2 (cropped).jpg',
+  'm-vini': 'Vinícius Júnior Brazil V Morocco 13 June 2026-207 (cropped).jpg',
+  'm-yamal': 'Lamine Yamal a Xina (2025).png',
+  'm-pedri': 'Pedri.jpg',
+  'm-kane': 'The Prime Minister at St George\'s Park with Gareth Southgate on October 10, 2023 (Harry Kane).jpg',
+  'm-salah': 'Mohamed Salah 2018.jpg',
+  'm-alvarez': 'Argentina national football team - 2 - 2022 (Julián Álvarez).jpg',
+  'm-hakimi': 'Achraf Hakimi Morocco v Norway 7 June 2026-16.jpg',
+  'm-cr7': 'Cristiano Ronaldo 2275 (cropped).jpg',
+  'm-diaz': 'FC RB Salzburg gegen FC Bayern München (2026-01-06 Testspiel) 40 (Luiz Díaz).jpg',
+  'm-guler': 'Derbide Fenerbahçe Yedek Oyuncu Arda Güler (2021-22 Süper Lig - Cropped).jpg',
+  // Soccer — Mondial legends (World Cup icons; some reuse the soccer-legends file)
+  'wl-pele': 'Pele con brasil (cropped).jpg',
+  'wl-maradona': 'Argentina celebrando copa (cropped).jpg',
+  'wl-zidane': 'Zinedine Zidane by Tasnim 03.jpg',
+  'wl-r9': 'Ronaldo Luís Nazário de Lima 2019 (3x4 cropped).jpg',
+  'wl-beckenbauer': 'Franz Beckenbauer (1975).jpg',
+  'wl-muller': 'Gerd Müller c1973 (cropped).jpg',
+  'wl-rossi': 'Paolo Rossi Vicenza (cropped).jpg',
+  'wl-cafu': 'Cafu - 26.02.2026 - Cerimônia de apresentação das taças da Copa do Mundo de 2026.jpg',
+  'wl-matthaus': '2019 Lothar Matthäus.jpg',
+  'wl-romario': 'Senadores da 57ª Legislatura (52689451805).jpg',
+  'wl-fontaine': '23.05.66 Just Fontaine dans son magasin (1966) - 53Fi634 (Cropped).jpg',
+  'wl-moore': 'Bobby moore elgrafico 1970.jpg',
+});
+
 // --- builders (two sports key attrs by different ids) ------------------------
+// Each looks up its headshot in PHOTOS by id; absent -> null (jersey fallback).
 function hoops(
   id: string, name: string, short: string, mono: string, num: number,
   team: string, era: string, colors: readonly [string, string],
@@ -34,7 +131,7 @@ function hoops(
   return Object.freeze({
     id, name, short, monogram: mono, number: num, team, era,
     colors: Object.freeze(colors) as readonly [string, string],
-    attrs: Object.freeze(attrs), nbaId,
+    attrs: Object.freeze(attrs), nbaId, photo: PHOTOS[id] ?? null,
   });
 }
 function soc(
