@@ -1,20 +1,19 @@
 // ============================================================================
 // Build Your GOAT — mode data: every game mode's sport, category set, roster.
 // ROSTERS[mode] -> Player[]; MODES[mode] declares sport + category set + label.
-// Shape mirrors players.js so a roster feeds straight into the reel/scoring.
 //
 // PHOTOS: NBA players carry an `nbaId` (NBA headshot CDN); soccer + EuroLeague
 // players carry a `photo` (Wikimedia Commons file, see the PHOTOS map below) so
 // every roster shows real faces. Anyone still missing a photo falls back to the
-// CSS jersey/monogram art automatically (see playerCard.js) — nothing breaks.
+// CSS jersey/monogram art automatically (see playerCard) — nothing breaks.
 // ============================================================================
 
+import type { Player, Category, Mode, ModeId, PlayerId, CategoryId } from '../engine/types.js';
 import { CATEGORIES } from './categories.js';
-import { PLAYERS, headshotUrl } from './players.js';
+import { PLAYERS } from './players.js';
 
 // --- SOCCER skill slots (basketball modes reuse the existing CATEGORIES) -----
-/** @type {{id:string,label:string,icon:string,tagline:string,accent:string}[]} */
-export const SOCCER_CATEGORIES = Object.freeze([
+export const SOCCER_CATEGORIES: readonly Category[] = Object.freeze([
   scat('pace', 'Pace', '⚡', 'Burners and acceleration', '#ffd60a'),
   scat('shooting', 'Shooting', '🎯', 'Finishing and power', '#ff6b35'),
   scat('passing', 'Passing', '🪄', 'Vision and range', '#4cc9f0'),
@@ -23,7 +22,7 @@ export const SOCCER_CATEGORIES = Object.freeze([
   scat('physical', 'Physical', '💪', 'Strength and stamina', '#ef476f'),
 ]);
 
-function scat(id, label, icon, tagline, accent) {
+function scat(id: string, label: string, icon: string, tagline: string, accent: string): Category {
   return Object.freeze({ id, label, icon, tagline, accent });
 }
 
@@ -34,7 +33,7 @@ function scat(id, label, icon, tagline, accent) {
 // (e.g. NBA players, who use nbaId, or anyone without a free photo) fall back to
 // the CSS jersey art automatically. Duplicate people across rosters (Messi in
 // soccer-current AND soccer-mondial-2026, etc.) share the same file.
-const PHOTOS = Object.freeze({
+const PHOTOS: Readonly<Record<string, string>> = Object.freeze({
   // EuroLeague — legends
   saras: 'Šarūnas Jasikevičius Fenerbahçe Basketbol TBSL 20250517 (2).jpg',
   diamantidis: 'Diamantidis 11052013.JPG',
@@ -124,15 +123,27 @@ const PHOTOS = Object.freeze({
 
 // --- builders (two sports key attrs by different ids) ------------------------
 // Each looks up its headshot in PHOTOS by id; absent -> null (jersey fallback).
-function hoops(id, name, short, mono, num, team, era, colors, attrs, nbaId = null) {
-  return Object.freeze({ id, name, short, monogram: mono, number: num, team, era, colors: Object.freeze(colors), attrs: Object.freeze(attrs), nbaId, photo: PHOTOS[id] ?? null });
+function hoops(
+  id: string, name: string, short: string, mono: string, num: number,
+  team: string, era: string, colors: readonly [string, string],
+  attrs: Record<CategoryId, number>, nbaId: number | null = null,
+): Player {
+  return Object.freeze({
+    id, name, short, monogram: mono, number: num, team, era,
+    colors: Object.freeze(colors) as readonly [string, string],
+    attrs: Object.freeze(attrs), nbaId, photo: PHOTOS[id] ?? null,
+  });
 }
-function soc(id, name, short, mono, num, team, era, colors, attrs) {
-  return Object.freeze({ id, name, short, monogram: mono, number: num, team, era, colors: Object.freeze(colors), attrs: Object.freeze(attrs), nbaId: null, photo: PHOTOS[id] ?? null });
+function soc(
+  id: string, name: string, short: string, mono: string, num: number,
+  team: string, era: string, colors: readonly [string, string],
+  attrs: Record<CategoryId, number>,
+): Player {
+  return hoops(id, name, short, mono, num, team, era, colors, attrs, null);
 }
 
 // === BASKETBALL — NBA (current, 2025-26) ====================================
-const NBA_CURRENT = [
+const NBA_CURRENT: readonly Player[] = [
   hoops('sga', 'Shai Gilgeous-Alexander', 'Gilgeous-Alexander', 'SGA', 2, 'OKC', '2020s', ['#007AC1', '#EF3B24'],
     { scoring: 97, playmaking: 90, defense: 88, athleticism: 90, clutch: 96, leadership: 92 }, 1628983),
   hoops('jokic', 'Nikola Jokić', 'Jokić', 'NJ', 15, 'DEN', '2020s', ['#0E2240', '#FEC524'],
@@ -168,7 +179,7 @@ const NBA_CURRENT = [
 ];
 
 // === BASKETBALL — EUROLEAGUE (legends) ======================================
-const EUROLEAGUE_LEGENDS = [
+const EUROLEAGUE_LEGENDS: readonly Player[] = [
   hoops('saras', 'Šarūnas Jasikevičius', 'Jasikevičius', 'SJ', 11, 'Maccabi / Barça', '2000s', ['#FFD200', '#003DA5'],
     { scoring: 88, playmaking: 95, defense: 80, athleticism: 78, clutch: 97, leadership: 96 }),
   hoops('diamantidis', 'Dimitris Diamantidis', 'Diamantidis', 'DD', 13, 'Panathinaikos', '2000s', ['#006B3F', '#FFFFFF'],
@@ -196,7 +207,7 @@ const EUROLEAGUE_LEGENDS = [
 ];
 
 // === BASKETBALL — EUROLEAGUE (current, 2025-26) =============================
-const EUROLEAGUE_CURRENT = [
+const EUROLEAGUE_CURRENT: readonly Player[] = [
   hoops('nunn', 'Kendrick Nunn', 'Nunn', 'KN', 25, 'Panathinaikos', '2020s', ['#006B3F', '#FFFFFF'],
     { scoring: 95, playmaking: 84, defense: 76, athleticism: 86, clutch: 92, leadership: 84 }),
   hoops('mjames', 'Mike James', 'James', 'MJ', 5, 'AS Monaco', '2020s', ['#E2001A', '#FFFFFF'],
@@ -220,7 +231,7 @@ const EUROLEAGUE_CURRENT = [
 ];
 
 // === SOCCER — LEGENDS =======================================================
-const SOCCER_LEGENDS = [
+const SOCCER_LEGENDS: readonly Player[] = [
   soc('pele', 'Pelé', 'Pelé', 'PE', 10, 'Brazil', '1960s', ['#FFDF00', '#009C3B'],
     { pace: 90, shooting: 96, passing: 92, dribbling: 95, defending: 45, physical: 84 }),
   soc('maradona', 'Diego Maradona', 'Maradona', 'DM', 10, 'Argentina', '1980s', ['#75AADB', '#FFFFFF'],
@@ -252,7 +263,7 @@ const SOCCER_LEGENDS = [
 ];
 
 // === SOCCER — CURRENT (club stars, 2025-26) =================================
-const SOCCER_CURRENT = [
+const SOCCER_CURRENT: readonly Player[] = [
   soc('messi', 'Lionel Messi', 'Messi', 'LM', 10, 'Inter Miami', '2020s', ['#F7B5CD', '#231F20'],
     { pace: 78, shooting: 92, passing: 95, dribbling: 97, defending: 36, physical: 64 }),
   soc('mbappe', 'Kylian Mbappé', 'Mbappé', 'KM', 10, 'Real Madrid', '2020s', ['#C7A24A', '#1A1A1A'],
@@ -284,7 +295,7 @@ const SOCCER_CURRENT = [
 ];
 
 // === SOCCER — MONDIAL 2026 (national-team stars) ============================
-const SOCCER_MONDIAL_2026 = [
+const SOCCER_MONDIAL_2026: readonly Player[] = [
   soc('m-messi', 'Lionel Messi', 'Messi', 'LM', 10, 'Argentina', '2026', ['#75AADB', '#FFFFFF'],
     { pace: 78, shooting: 92, passing: 95, dribbling: 97, defending: 36, physical: 64 }),
   soc('m-mbappe', 'Kylian Mbappé', 'Mbappé', 'KM', 10, 'France', '2026', ['#0055A4', '#EF4135'],
@@ -316,7 +327,7 @@ const SOCCER_MONDIAL_2026 = [
 ];
 
 // === SOCCER — MONDIAL LEGENDS (World Cup icons) =============================
-const SOCCER_MONDIAL_LEGENDS = [
+const SOCCER_MONDIAL_LEGENDS: readonly Player[] = [
   soc('wl-pele', 'Pelé', 'Pelé', 'PE', 10, 'Brazil', '1970', ['#FFDF00', '#009C3B'],
     { pace: 90, shooting: 96, passing: 92, dribbling: 95, defending: 45, physical: 84 }),
   soc('wl-maradona', 'Diego Maradona', 'Maradona', 'DM', 10, 'Argentina', '1986', ['#75AADB', '#FFFFFF'],
@@ -343,8 +354,8 @@ const SOCCER_MONDIAL_LEGENDS = [
     { pace: 76, shooting: 58, passing: 86, dribbling: 78, defending: 95, physical: 84 }),
 ];
 
-// --- rosters keyed by mode id ('nba-legends' = the existing players.js list) -
-export const ROSTERS = Object.freeze({
+// --- rosters keyed by mode id ('nba-legends' = the existing players.ts list) -
+export const ROSTERS: Readonly<Record<ModeId, readonly Player[]>> = Object.freeze({
   'nba-legends': PLAYERS,
   'nba-current': Object.freeze(NBA_CURRENT),
   'euroleague-legends': Object.freeze(EUROLEAGUE_LEGENDS),
@@ -356,7 +367,7 @@ export const ROSTERS = Object.freeze({
 });
 
 // --- mode registry: sport + category set + display label + live flag ---------
-export const MODES = Object.freeze({
+export const MODES: Readonly<Record<ModeId, Mode>> = Object.freeze({
   'nba-legends': { sport: 'basketball', icon: '🏀', categories: CATEGORIES, label: 'NBA · Legends', live: false },
   'nba-current': { sport: 'basketball', icon: '🏀', categories: CATEGORIES, label: 'NBA · Current', live: true },
   'euroleague-legends': { sport: 'basketball', icon: '🏀', categories: CATEGORIES, label: 'EuroLeague · Legends', live: false },
@@ -368,47 +379,50 @@ export const MODES = Object.freeze({
 });
 
 /** Mode ids in display order (used by the mode-select screen). */
-export const MODE_IDS = Object.freeze(Object.keys(MODES));
+export const MODE_IDS: readonly ModeId[] = Object.freeze(Object.keys(MODES));
 
 /** The default mode (the original game). */
-export const DEFAULT_MODE = 'nba-legends';
+export const DEFAULT_MODE: ModeId = 'nba-legends';
 
 /** True if `mode` is a known mode id. */
-export function isMode(mode) {
+export function isMode(mode: string): mode is ModeId {
   return Object.prototype.hasOwnProperty.call(MODES, mode);
 }
 
+/** Fail-fast mode lookup (the engine treats an unknown mode as a programmer error). */
+export function modeDef(mode: ModeId): Mode {
+  const m = MODES[mode];
+  if (!m) throw new Error(`Unknown mode: ${mode}`);
+  return m;
+}
+
 /** The category (skill-slot) array for a mode. */
-export function categoriesForMode(mode) {
-  return MODES[mode].categories;
+export function categoriesForMode(mode: ModeId): readonly Category[] {
+  return modeDef(mode).categories;
 }
 
 /** The player roster for a mode. */
-export function rosterForMode(mode) {
-  return ROSTERS[mode];
+export function rosterForMode(mode: ModeId): readonly Player[] {
+  const r = ROSTERS[mode];
+  if (!r) throw new Error(`Unknown mode roster: ${mode}`);
+  return r;
 }
 
 /** Number of rounds for a mode (one per category). */
-export function totalRoundsForMode(mode) {
+export function totalRoundsForMode(mode: ModeId): number {
   return categoriesForMode(mode).length;
 }
 
 // Lazily-built id -> player index, per mode (ids are unique within a roster).
-const _index = {};
-export function playerForMode(mode, id) {
-  if (!_index[mode]) {
-    _index[mode] = Object.create(null);
-    for (const p of rosterForMode(mode)) _index[mode][p.id] = p;
+const _index: Record<ModeId, Record<PlayerId, Player>> = Object.create(null);
+export function playerForMode(mode: ModeId, id: PlayerId): Player {
+  let byId = _index[mode];
+  if (!byId) {
+    byId = Object.create(null) as Record<PlayerId, Player>;
+    for (const p of rosterForMode(mode)) byId[p.id] = p;
+    _index[mode] = byId;
   }
-  return _index[mode][id];
-}
-
-/** Warm the headshot cache for a mode (any player with a photo source). */
-export function preloadModeHeadshots(mode) {
-  for (const p of rosterForMode(mode)) {
-    const url = headshotUrl(p);
-    if (!url) continue;
-    const img = new Image();
-    img.src = url;
-  }
+  const player = byId[id];
+  if (!player) throw new Error(`Unknown player '${id}' in mode '${mode}'`);
+  return player;
 }

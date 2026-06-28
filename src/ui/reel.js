@@ -5,9 +5,9 @@
 
 import { clear } from './dom.js';
 import { playerCard } from './playerCard.js';
-import { shuffle } from '../core/random.js';
 import { sfx } from './sound.js';
 import { getSetting } from '../core/settings.js';
+import { FREEZE_SLOWDOWN } from '../engine/config.js';
 
 // Base cadence (ms) between faces, by user-chosen reel speed. The cadence is the
 // player's reaction window — slower = easier to nail a target, faster = harder.
@@ -19,12 +19,17 @@ const SPIN_MS_BY_SPEED = { chill: 320, normal: 190, hyper: 115 };
  * @param {HTMLElement} cfg.mount      Container the current card lives in.
  * @param {import('../data/categories.js').Category} cfg.category
  * @param {import('../data/players.js').Player[]} cfg.pool   Players to cycle.
+ * @param {boolean} [cfg.frozen]   When true, a spent Freeze slows the cadence.
  * @param {(player:import('../data/players.js').Player)=>void} cfg.onSettled
  * @returns {{ lock:()=>void, destroy:()=>void, isLocking:()=>boolean }}
  */
-export function createReel({ mount, category, pool, onSettled }) {
-  const order = shuffle(pool);
-  const spinMs = SPIN_MS_BY_SPEED[getSetting('reelSpeed')] ?? SPIN_MS_BY_SPEED.normal;
+export function createReel({ mount, category, pool, frozen = false, onSettled }) {
+  // `pool` is already in the engine's seeded order — cycle it as given so the
+  // reel sequence is deterministic (no Math.random here).
+  const order = pool;
+  const baseMs = SPIN_MS_BY_SPEED[getSetting('reelSpeed')] ?? SPIN_MS_BY_SPEED.normal;
+  // A spent Freeze slows the reel this round for a more precise lock.
+  const spinMs = frozen ? Math.round(baseMs * FREEZE_SLOWDOWN) : baseMs;
   const animate = getSetting('spinFx') !== false;
   const slideMs = spinMs; // spans the full tick → one continuous, constant-speed stream
 

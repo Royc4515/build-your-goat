@@ -3,7 +3,7 @@
 // so there are no image files to load or break.
 
 import { el } from './dom.js';
-import { headshotUrl, hasHeadshot } from '../data/players.js';
+import { headshotUrl, hasHeadshot } from '../data/headshots.js';
 import { getSetting } from '../core/settings.js';
 
 /** Map a 0-99 rating to a label tier for color coding. */
@@ -77,7 +77,7 @@ export function playerCard(player, opts = {}) {
   const children = [jersey, meta];
 
   if (category) {
-    const value = player.attrs[category.id];
+    const value = player.attrs[category.id] ?? 0; // defensive: never render "undefined"
     children.push(
       el('div', {
         class: ['card__stat', ratingClass(value)],

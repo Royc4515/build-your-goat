@@ -6,6 +6,8 @@ Thumbs.db
 # Local tooling artifacts
 .playwright-mcp/
 node_modules/
+dist/
+coverage/
 
 # Stray screenshots / scratch images (the game uses no local image assets)
 *.png

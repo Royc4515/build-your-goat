@@ -5,7 +5,7 @@
 import { el, clear } from './dom.js';
 import { playerCard } from './playerCard.js';
 import { MODES, categoriesForMode, playerForMode } from '../data/modes.js';
-import { scoreBuild } from '../core/rating.js';
+import { scoreBuild } from '../engine/scoring/scoring.js';
 import { sfx } from './sound.js';
 import { openShareSheet } from './share.js';
 
@@ -120,9 +120,15 @@ export function renderResult(root, { mode, picks, onPlayAgain, onChangeMode }) {
     text: `${MODES[mode].icon} ${MODES[mode].label}`,
   });
 
+  const synergyText =
+    result.chemistry > 0
+      ? `  +${result.chemistry} synergy`
+      : result.chemistry < 0
+        ? `  ${result.chemistry} (roles missing)`
+        : '';
   const breakdown = el('div', {
     class: 'breakdown',
-    text: `Base ${result.base}${result.chemistry > 0 ? `  +${result.chemistry} chemistry` : ''}`,
+    text: `Base ${result.base}${synergyText}  ·  ${result.synergy.rolesCovered}/${categories.length} roles covered`,
   });
 
   const badges = el('div', {

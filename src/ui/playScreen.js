@@ -3,25 +3,29 @@
 //     face on screen at that instant (skill, not luck) and commits it.
 //   mountReveal    — shows the just-locked pick for a beat before advancing.
 // Both carry a pause button that works at all times. Categories, roster and
-// player lookups all come from the active mode (state.mode), so the same screen
+// player lookups all come from the active mode (state.config.mode), so the same screen
 // plays NBA / EuroLeague / Soccer. Each returns a cleanup function the caller
 // MUST run before mounting the next view.
 
 import { el, clear } from './dom.js';
-import { currentCategory } from '../core/state.js';
-import { categoriesForMode, rosterForMode, playerForMode } from '../data/modes.js';
+import { currentCategory } from '../engine/match/match.js';
+import { categoriesForMode, playerForMode } from '../data/modes.js';
 import { createReel } from './reel.js';
 import { playerCard } from './playerCard.js';
+import { poolMeter } from './hud/poolMeter.js';
+import { powerUps } from './hud/powerUps.js';
+import { buildProjection } from './hud/buildProjection.js';
 import { sfx } from './sound.js';
 
 /**
  * Mount the spinning round.
  * @param {HTMLElement} root
- * @param {import('../core/state.js').GameState} state
- * @param {{ onLocked:(playerId:string)=>void, onPause:()=>void, onBack:()=>void }} handlers
+ * @param {import('../engine/types.js').MatchState} state
+ * @param {{ onLocked:(playerId:string)=>void, onPause:()=>void, onBack:()=>void,
+ *           onReroll:()=>void, onFreeze:()=>void }} handlers
  * @returns {() => void}  cleanup
  */
-export function mountPlayRound(root, state, { onLocked, onPause, onBack }) {
+export function mountPlayRound(root, state, { onLocked, onPause, onBack, onReroll, onFreeze }) {
   clear(root);
   const category = currentCategory(state);
   const stage = el('div', { class: 'reel-stage' });
@@ -38,8 +42,11 @@ export function mountPlayRound(root, state, { onLocked, onPause, onBack }) {
     children: [
       progressBar(state, [makeBackBtn(onBack), makePauseBtn(onPause)]),
       categoryBanner(category),
+      poolMeter(state.pool.available.length, state.pool.order.length),
       stage,
       lockBtn,
+      powerUps({ economy: state.economy, frozen: state.frozen, onReroll, onFreeze }),
+      buildProjection(state),
       slotTray(state),
     ],
   });
@@ -48,7 +55,9 @@ export function mountPlayRound(root, state, { onLocked, onPause, onBack }) {
   const reel = createReel({
     mount: stage,
     category,
-    pool: rosterForMode(state.mode),
+    // Only the players still available in the shared pool, in seeded order.
+    pool: state.pool.available.map((id) => playerForMode(state.config.mode, id)),
+    frozen: state.frozen,
     // Captured at press time; commit straight away. The reveal STATE shows it,
     // so a pause can never lose an earned pick.
     onSettled: (player) => onLocked(player.id),
@@ -82,15 +91,15 @@ export function mountPlayRound(root, state, { onLocked, onPause, onBack }) {
  * Mount the reveal of a just-locked pick (state.reveal must be set). It waits
  * for the player to press Continue — it never auto-advances.
  * @param {HTMLElement} root
- * @param {import('../core/state.js').GameState} state
+ * @param {import('../engine/types.js').MatchState} state
  * @param {{ onAdvance:()=>void, onPause:()=>void, onBack:()=>void }} handlers
  * @returns {() => void}  cleanup
  */
 export function mountReveal(root, state, { onAdvance, onPause, onBack }) {
   clear(root);
-  const category = categoriesForMode(state.mode)[state.round];
-  const player = playerForMode(state.mode, state.reveal.playerId);
-  const isLastRound = state.round + 1 >= categoriesForMode(state.mode).length;
+  const category = categoriesForMode(state.config.mode)[state.round];
+  const player = playerForMode(state.config.mode, state.reveal.playerId);
+  const isLastRound = state.round + 1 >= categoriesForMode(state.config.mode).length;
 
   const stage = el('div', { class: 'reel-stage' });
   const card = playerCard(player, { category });
@@ -114,6 +123,7 @@ export function mountReveal(root, state, { onAdvance, onPause, onBack }) {
       stage,
       locked,
       continueBtn,
+      buildProjection(state),
       slotTray(state),
     ],
   });
@@ -177,7 +187,7 @@ function makeBackBtn(onBack) {
 }
 
 function progressBar(state, controls) {
-  const categories = categoriesForMode(state.mode);
+  const categories = categoriesForMode(state.config.mode);
   const dots = categories.map((_, i) =>
     el('span', {
       class: ['dot', i < state.round ? 'dot--done' : i === state.round ? 'dot--active' : 'dot--todo'],
@@ -214,7 +224,7 @@ function categoryBanner(category) {
 }
 
 function slotTray(state) {
-  const categories = categoriesForMode(state.mode);
+  const categories = categoriesForMode(state.config.mode);
   const slots = categories.map((c, i) => {
     const pickedId = state.picks[c.id];
     const filled = Boolean(pickedId);
@@ -225,7 +235,7 @@ function slotTray(state) {
         el('span', { class: 'slot__icon', text: c.icon }),
         el('span', {
           class: 'slot__who',
-          text: filled ? playerForMode(state.mode, pickedId).short : '—',
+          text: filled ? playerForMode(state.config.mode, pickedId).short : '—',
         }),
       ],
     });

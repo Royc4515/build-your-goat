@@ -1424,3 +1424,106 @@ body {
     font-size: 5rem;
   }
 }
+
+/* --- Pool meter (M2): players left in the shared draft pool --------------- */
+.pool-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  align-self: center;
+  margin: 0.1rem auto 0;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.82);
+}
+.pool-meter__count {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent, #ffd60a);
+  font-weight: 800;
+}
+.pool-meter__total {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* --- Power-ups (M3): Reroll + Freeze -------------------------------------- */
+.powerups {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  margin: 0.1rem 0;
+}
+.powerup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.15s ease, opacity 0.15s ease;
+}
+.powerup:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+  transform: translateY(-1px);
+}
+.powerup:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.powerup--active {
+  border-color: #4cc9f0;
+  background: rgba(76, 201, 240, 0.22);
+}
+.powerup__count {
+  font-variant-numeric: tabular-nums;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 999px;
+  padding: 0 0.4rem;
+  min-width: 1.3em;
+  text-align: center;
+}
+
+/* --- Live build projection (M4) ------------------------------------------ */
+.projection {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: center;
+  margin: 0.1rem auto;
+  padding: 0.25rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.8rem;
+}
+.projection__label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+  font-size: 0.7rem;
+}
+.projection__ovr {
+  font-weight: 900;
+  font-size: 1.05rem;
+  color: var(--accent, #ffd60a);
+  font-variant-numeric: tabular-nums;
+}
+.projection__tier {
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 600;
+}
+.projection__count {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.5);
+  font-variant-numeric: tabular-nums;
+}

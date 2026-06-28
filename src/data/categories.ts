@@ -1,17 +1,9 @@
 // The attribute "slots" the player fills to build their GOAT.
 // Round order follows this array. Each id matches a key in every player's attrs.
 
-/**
- * @typedef {Object} Category
- * @property {string} id       Matches Player.attrs key.
- * @property {string} label    Display name.
- * @property {string} icon     Emoji shown on the slot.
- * @property {string} tagline  Short flavor text.
- * @property {string} accent   Accent color for the round UI.
- */
+import type { Category } from '../engine/types.js';
 
-/** @type {Category[]} */
-export const CATEGORIES = Object.freeze([
+export const CATEGORIES: readonly Category[] = Object.freeze([
   cat('scoring', 'Scoring', '🏀', 'Pure bucket-getting', '#ff6b35'),
   cat('playmaking', 'Playmaking', '🎯', 'Court vision & dimes', '#4cc9f0'),
   cat('defense', 'Defense', '🛡️', 'Lockdown on a string', '#7b2ff7'),
@@ -20,7 +12,13 @@ export const CATEGORIES = Object.freeze([
   cat('leadership', 'Leadership', '👑', 'The will to win', '#ef476f'),
 ]);
 
-function cat(id, label, icon, tagline, accent) {
+function cat(
+  id: string,
+  label: string,
+  icon: string,
+  tagline: string,
+  accent: string,
+): Category {
   return Object.freeze({ id, label, icon, tagline, accent });
 }
 
