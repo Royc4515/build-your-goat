@@ -16,8 +16,9 @@ import type {
 } from '../types.js';
 import { categoriesForMode, rosterForMode } from '../../data/modes.js';
 import { scoreBuild } from '../scoring/scoring.js';
-import { makeRng } from '../rng.js';
+import { makeRng, shuffle } from '../rng.js';
 import { createPool, removeFromPool, isAvailable } from '../pool/pool.js';
+import { initEconomy, canReroll, canFreeze, spendReroll, spendFreeze } from '../economy/economy.js';
 
 /** Begin a fresh match. The seed fully determines the draft pool order. */
 export function createMatch(config: MatchConfig): MatchState {
@@ -32,6 +33,8 @@ export function createMatch(config: MatchConfig): MatchState {
     round: 0,
     picks: Object.freeze({}),
     pool,
+    economy: initEconomy(),
+    frozen: false,
     rngState: rng.state(),
     reveal: null,
   });
@@ -71,7 +74,41 @@ export function advanceAfterReveal(state: MatchState): MatchState {
     ...state,
     phase: done ? 'result' : 'spinning',
     round: nextRound,
+    frozen: false, // a spent Freeze only lasts its round
     reveal: null,
+  });
+}
+
+/**
+ * Spend a Reroll: reshuffle the remaining pool (refresh which faces appear) using
+ * the match's continued PRNG stream — deterministic given the seed. No-op unless
+ * a reroll is available and the reel is live (spinning, no pending reveal).
+ */
+export function useReroll(state: MatchState): MatchState {
+  if (state.phase !== 'spinning' || state.reveal || !canReroll(state.economy)) return state;
+  const rng = makeRng(state.rngState);
+  const available = Object.freeze(shuffle(rng.next, state.pool.available));
+  return Object.freeze({
+    ...state,
+    pool: Object.freeze({ order: state.pool.order, available }),
+    economy: spendReroll(state.economy),
+    rngState: rng.state(),
+  });
+}
+
+/**
+ * Spend a Freeze: slow the current round's reel for a more precise lock. No-op
+ * unless a freeze is available, the round isn't already frozen, and the reel is
+ * live.
+ */
+export function useFreeze(state: MatchState): MatchState {
+  if (state.phase !== 'spinning' || state.reveal || state.frozen || !canFreeze(state.economy)) {
+    return state;
+  }
+  return Object.freeze({
+    ...state,
+    economy: spendFreeze(state.economy),
+    frozen: true,
   });
 }
 

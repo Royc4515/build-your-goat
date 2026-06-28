@@ -102,6 +102,14 @@ export interface Pool {
   readonly available: readonly PlayerId[];
 }
 
+/** Scarce, use-it-or-lose-it power-ups for a single match. */
+export interface EconomyState {
+  /** Re-spins the remaining pool order (refresh which faces the reel shows). */
+  readonly rerolls: number;
+  /** Slows the reel for one round, for a more precise lock. */
+  readonly freezes: number;
+}
+
 export interface MatchState {
   readonly config: MatchConfig;
   readonly phase: MatchPhase;
@@ -109,6 +117,9 @@ export interface MatchState {
   readonly picks: Readonly<Record<CategoryId, PlayerId>>;
   /** Seeded draft pool; the reel cycles `pool.available`. */
   readonly pool: Pool;
+  readonly economy: EconomyState;
+  /** Whether the current round's reel is slowed by a spent Freeze. */
+  readonly frozen: boolean;
   /** Serialized PRNG counter — keeps the state pure and the match replayable. */
   readonly rngState: number;
   readonly reveal: Reveal | null;

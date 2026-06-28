@@ -6,6 +6,8 @@ import {
   advanceAfterReveal,
   isComplete,
   matchResult,
+  useReroll,
+  useFreeze,
 } from './match.js';
 import { categoriesForMode, rosterForMode } from '../../data/modes.js';
 import type { MatchConfig } from '../types.js';
@@ -96,5 +98,42 @@ describe('lock / advance transitions', () => {
     expect(result.slots).toHaveLength(categories.length);
     expect(result.overall).toBeGreaterThan(0);
     expect(result.overall).toBeLessThanOrEqual(99);
+  });
+});
+
+describe('economy power-ups', () => {
+  it('starts with the configured power-ups', () => {
+    const m = createMatch(solo(7));
+    expect(m.economy).toEqual({ rerolls: 3, freezes: 2 });
+    expect(m.frozen).toBe(false);
+  });
+
+  it('useReroll spends one, reshuffles the same set, and is deterministic', () => {
+    const m0 = createMatch(solo(7));
+    const m1 = useReroll(m0);
+    expect(m1.economy.rerolls).toBe(2);
+    expect([...m1.pool.available].sort()).toEqual([...m0.pool.available].sort()); // same set
+    expect(useReroll(m0).pool.available).toEqual(m1.pool.available); // deterministic given state
+  });
+
+  it('useReroll is a no-op with no rerolls left or during a reveal', () => {
+    let m = createMatch(solo(7));
+    m = useReroll(useReroll(useReroll(m))); // spend all 3
+    expect(m.economy.rerolls).toBe(0);
+    expect(useReroll(m)).toBe(m);
+
+    const revealing = lockPick(createMatch(solo(7)), 'jordan');
+    expect(useReroll(revealing)).toBe(revealing);
+  });
+
+  it('useFreeze sets frozen, spends one, and clears next round', () => {
+    const m0 = createMatch(solo(7));
+    const f = useFreeze(m0);
+    expect(f.frozen).toBe(true);
+    expect(f.economy.freezes).toBe(1);
+    expect(useFreeze(f)).toBe(f); // already frozen -> no-op
+
+    const next = advanceAfterReveal(lockPick(f, f.pool.available[0]!));
+    expect(next.frozen).toBe(false); // reset for the new round
   });
 });

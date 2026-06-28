@@ -13,16 +13,18 @@ import { categoriesForMode, playerForMode } from '../data/modes.js';
 import { createReel } from './reel.js';
 import { playerCard } from './playerCard.js';
 import { poolMeter } from './hud/poolMeter.js';
+import { powerUps } from './hud/powerUps.js';
 import { sfx } from './sound.js';
 
 /**
  * Mount the spinning round.
  * @param {HTMLElement} root
  * @param {import('../engine/types.js').MatchState} state
- * @param {{ onLocked:(playerId:string)=>void, onPause:()=>void, onBack:()=>void }} handlers
+ * @param {{ onLocked:(playerId:string)=>void, onPause:()=>void, onBack:()=>void,
+ *           onReroll:()=>void, onFreeze:()=>void }} handlers
  * @returns {() => void}  cleanup
  */
-export function mountPlayRound(root, state, { onLocked, onPause, onBack }) {
+export function mountPlayRound(root, state, { onLocked, onPause, onBack, onReroll, onFreeze }) {
   clear(root);
   const category = currentCategory(state);
   const stage = el('div', { class: 'reel-stage' });
@@ -42,6 +44,7 @@ export function mountPlayRound(root, state, { onLocked, onPause, onBack }) {
       poolMeter(state.pool.available.length, state.pool.order.length),
       stage,
       lockBtn,
+      powerUps({ economy: state.economy, frozen: state.frozen, onReroll, onFreeze }),
       slotTray(state),
     ],
   });
@@ -52,6 +55,7 @@ export function mountPlayRound(root, state, { onLocked, onPause, onBack }) {
     category,
     // Only the players still available in the shared pool, in seeded order.
     pool: state.pool.available.map((id) => playerForMode(state.config.mode, id)),
+    frozen: state.frozen,
     // Captured at press time; commit straight away. The reveal STATE shows it,
     // so a pause can never lose an earned pick.
     onSettled: (player) => onLocked(player.id),

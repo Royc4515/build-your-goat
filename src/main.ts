@@ -12,7 +12,14 @@ import { renderSettings } from './ui/settingsScreen.js';
 import { renderModeSelect } from './ui/modeSelect.js';
 import { mountPlayRound, mountReveal } from './ui/playScreen.js';
 import { mountPauseMenu } from './ui/pauseMenu.js';
-import { createMatch, lockPick, advanceAfterReveal, isComplete } from './engine/match/match.js';
+import {
+  createMatch,
+  lockPick,
+  advanceAfterReveal,
+  isComplete,
+  useReroll,
+  useFreeze,
+} from './engine/match/match.js';
 import type { MatchState, ModeId } from './engine/types.js';
 import { toggleMute, music, applyAudioSettings } from './ui/sound.js';
 import { fitScreen } from './ui/fit.js';
@@ -99,6 +106,8 @@ function mountPlaying(): void {
       onLocked: (playerId: string) => setApp({ ...app, match: lockPick(match, playerId) }),
       onPause: pauseGame,
       onBack,
+      onReroll: () => setApp({ ...app, match: useReroll(match) }),
+      onFreeze: () => setApp({ ...app, match: useFreeze(match) }),
     });
   }
 }
