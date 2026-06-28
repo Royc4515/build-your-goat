@@ -61,6 +61,12 @@ const PHOTOS: Readonly<Record<string, string>> = Object.freeze({
   tavares: 'Edy Tavares 22 Real Madrid Baloncesto Euroleague 20250206 (5).jpg',
   larkin: 'Shane Larkin 0 Anadolu Efes TBSL 20250105 (1).jpg',
   osman: 'Cedi Osman 6 Panathinaikos BC Euroleague 20251216 (9).jpg',
+  sloukas: 'Kostas Sloukas 10 Panathinaikos BC Euroleague 20250204 (1).jpg',
+  lessort: 'Mathias Lessort 26 Panathinaikos BC 20241025 (6) (cropped).jpg',
+  punter: 'Kevin Punter 0 FC Barcelona (basketball) Euroleague 20250402 (4).jpg',
+  hayes: 'Nigel Hayes 11 Fenerbahçe Basketbol Euroleague 20250325 (1).jpg',
+  micic: 'Vasilije Micić 22 BC Žalgiris EuroLeague 20180223 (1).jpg',
+  clyburn: 'Will Clyburn 21 FC Barcelona (basketball) Euroleague 20251120 (4) (cropped).jpg',
   // Soccer — legends
   pele: 'Pele con brasil (cropped).jpg',
   maradona: 'Argentina celebrando copa (cropped).jpg',
