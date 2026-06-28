@@ -228,6 +228,18 @@ const EUROLEAGUE_CURRENT: readonly Player[] = [
     { scoring: 90, playmaking: 88, defense: 78, athleticism: 84, clutch: 88, leadership: 84 }),
   hoops('osman', 'Cedi Osman', 'Osman', 'CO', 16, 'Panathinaikos', '2020s', ['#006B3F', '#FFFFFF'],
     { scoring: 84, playmaking: 80, defense: 78, athleticism: 84, clutch: 84, leadership: 80 }),
+  hoops('sloukas', 'Kostas Sloukas', 'Sloukas', 'KS', 16, 'Panathinaikos', '2020s', ['#006B3F', '#FFFFFF'],
+    { scoring: 84, playmaking: 92, defense: 76, athleticism: 72, clutch: 92, leadership: 93 }),
+  hoops('lessort', 'Mathias Lessort', 'Lessort', 'ML', 7, 'Panathinaikos', '2020s', ['#006B3F', '#FFFFFF'],
+    { scoring: 82, playmaking: 62, defense: 90, athleticism: 92, clutch: 82, leadership: 80 }),
+  hoops('punter', 'Kevin Punter', 'Punter', 'KP', 0, 'Panathinaikos', '2020s', ['#006B3F', '#FFFFFF'],
+    { scoring: 91, playmaking: 80, defense: 76, athleticism: 82, clutch: 90, leadership: 82 }),
+  hoops('hayes', 'Nigel Hayes-Davis', 'Hayes-Davis', 'NH', 33, 'Fenerbahçe', '2020s', ['#FFED00', '#1B458F'],
+    { scoring: 90, playmaking: 78, defense: 82, athleticism: 84, clutch: 88, leadership: 84 }),
+  hoops('micic', 'Vasilije Micić', 'Micić', 'VM', 22, 'Hapoel Tel Aviv', '2020s', ['#C8102E', '#000000'],
+    { scoring: 88, playmaking: 93, defense: 76, athleticism: 80, clutch: 90, leadership: 88 }),
+  hoops('clyburn', 'Will Clyburn', 'Clyburn', 'WC', 21, 'Dubai Basketball', '2020s', ['#0A1A3F', '#C9A227'],
+    { scoring: 88, playmaking: 76, defense: 80, athleticism: 82, clutch: 90, leadership: 82 }),
 ];
 
 // === SOCCER — LEGENDS =======================================================
