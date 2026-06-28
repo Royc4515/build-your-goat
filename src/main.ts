@@ -182,9 +182,16 @@ function resumeGame(): void {
   fitActiveScreen();
 }
 
-/** Scale the freshly-rendered screen to fit the viewport (no scroll). */
+/** Scale the freshly-rendered screen to fit the viewport (no scroll).
+ *  Exception: the result screen has too much content to scale legibly;
+ *  it uses its own overflow-y: auto scroll instead. */
 function fitActiveScreen(): void {
-  fitScreen(root.querySelector('.screen'));
+  const screen = root.querySelector<HTMLElement>('.screen');
+  if (screen?.classList.contains('result')) {
+    fitScreen(null); // stop tracking so no scale is applied
+  } else {
+    fitScreen(screen);
+  }
 }
 
 function render(): void {
