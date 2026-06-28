@@ -74,7 +74,8 @@ export function currentCategory(state: MatchState): Category | null {
  *  nothing to lock, a reveal is pending, or the player is already drained. */
 export function lockPick(state: MatchState, playerId: PlayerId): MatchState {
   const turn = currentTurn(state);
-  if (!turn || state.reveal) return state;
+  if (!turn || state.reveal || state.phase !== 'spinning') return state;
+  if (turn.actor === 'cpu') return state; // CPU picks go through resolveAITurn only
   if (!isAvailable(state.pool, playerId)) return state;
   return commit(state, turn, playerId, state.rngState);
 }

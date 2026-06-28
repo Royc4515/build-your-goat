@@ -34,7 +34,9 @@ export function opponentTray(state, actor, label) {
           el('span', { class: 'opponent__name', text: label }),
           el('span', {
             class: 'opponent__ovr',
-            text: proj.filled ? `${proj.overall} OVR` : '—',
+            // Projected from filled slots only — show the count so a 2/6 lead
+            // isn't mistaken for a final score.
+            text: proj.filled ? `${proj.overall} OVR · ${proj.filled}/${proj.total}` : '—',
           }),
         ],
       }),

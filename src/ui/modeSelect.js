@@ -73,7 +73,7 @@ export function renderModeSelect(root, { onPick, onBack }) {
           el('span', { class: 'mode-card__icon', text: m.icon }),
           el('span', { class: 'mode-card__label', text: m.label }),
           m.live ? el('span', { class: 'mode-card__live', text: 'LIVE' }) : null,
-          disabled ? el('span', { class: 'mode-card__note', text: 'needs 12+ players' }) : null,
+          disabled ? el('span', { class: 'mode-card__note', text: 'roster too small' }) : null,
         ],
       });
       card.disabled = disabled;

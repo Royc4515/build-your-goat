@@ -7,7 +7,10 @@
 //         + noise   * rng()
 //
 // rng() is consumed once per candidate so the choice is reproducible from the
-// match seed regardless of difficulty.
+// match seed regardless of difficulty. NOTE: noise is assigned by pool-iteration
+// position, so a human Reroll (which reshuffles pool.available) shifts which
+// candidate gets which noise sample — intentional, and still fully deterministic
+// given the match history.
 
 import type { AIPolicy, CategoryId, MatchState, PlayerId } from '../types.js';
 import type { Rng } from '../rng.js';

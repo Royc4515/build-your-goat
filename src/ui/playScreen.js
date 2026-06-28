@@ -94,6 +94,7 @@ export function mountReveal(root, state, { onAdvance, onPause, onBack }) {
   const reveal = state.reveal;
   const isCpu = reveal.actor === 'cpu';
   const category = categoriesForMode(state.config.mode).find((c) => c.id === reveal.categoryId);
+  if (!category) throw new Error(`mountReveal: unknown category '${reveal.categoryId}'`);
   const player = playerForMode(state.config.mode, reveal.playerId);
   const isLastTurn = state.cursor + 1 >= state.draftOrder.length;
 
