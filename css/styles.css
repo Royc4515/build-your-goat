@@ -1703,3 +1703,165 @@ body {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.25);
 }
+
+/* --- UX: signature-role badge on cards ----------------------------------- */
+.card__role {
+  position: absolute;
+  top: 0.4rem;
+  left: 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+  z-index: 2;
+  pointer-events: none;
+}
+.card__role-label {
+  text-transform: uppercase;
+}
+.card--compact .card__role {
+  font-size: 0.52rem;
+  padding: 0.08rem 0.35rem;
+}
+
+/* --- UX: live pick value while spinning ---------------------------------- */
+.live-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0.1rem auto;
+}
+.live-value__cap {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.live-value__num {
+  font-family: 'Anton', sans-serif;
+  font-size: 2rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.tone--elite { color: #ffd60a; }
+.tone--great { color: #06d6a0; }
+.tone--good { color: #4cc9f0; }
+.tone--ok { color: rgba(255, 255, 255, 0.75); }
+
+/* --- UX: roles-covered tracker ------------------------------------------- */
+.roles-tracker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: center;
+  margin: 0.1rem auto;
+}
+.roles-tracker__label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.6);
+}
+.roles-tracker__chips {
+  display: flex;
+  gap: 0.25rem;
+}
+.role-chip {
+  font-size: 0.95rem;
+  transition: filter 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+}
+.role-chip--off {
+  filter: grayscale(1);
+  opacity: 0.3;
+}
+.role-chip--on {
+  filter: none;
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+/* --- UX: coin-flip toss note --------------------------------------------- */
+.toss-note {
+  align-self: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.15rem 0.7rem;
+  border-radius: 999px;
+}
+.toss-note--me { color: #c7f9ec; }
+.toss-note--cpu { color: #ffd6e0; }
+.toss-spacer { display: none; }
+
+/* --- UX: CPU lineup on results ------------------------------------------- */
+.lineup__heading--cpu {
+  color: #ffd6e0;
+  margin-top: 0.4rem;
+}
+.lineup--cpu {
+  opacity: 0.92;
+}
+
+/* --- UX: how-to-play tutorial overlay ------------------------------------ */
+.tut {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(4, 6, 16, 0.82);
+  backdrop-filter: blur(4px);
+}
+.tut__card {
+  width: min(540px, 96vw);
+  max-height: 92vh;
+  overflow-y: auto;
+  background: #121833;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 1.2rem 1.3rem 1.4rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+.tut__heading {
+  font-family: 'Anton', sans-serif;
+  font-size: 1.5rem;
+  text-align: center;
+  margin: 0 0 0.8rem;
+}
+.tut__list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.tut__item {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+}
+.tut__icon {
+  font-size: 1.5rem;
+  flex: 0 0 auto;
+}
+.tut__title {
+  font-weight: 800;
+}
+.tut__desc {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.35;
+}

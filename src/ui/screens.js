@@ -10,6 +10,7 @@ import { matchWinner } from '../engine/match/match.js';
 import { HUMAN } from '../engine/types.js';
 import { sfx } from './sound.js';
 import { openShareSheet } from './share.js';
+import { openTutorial } from './tutorial.js';
 
 /** Public URL players are pointed at when they share. */
 const GAME_URL = 'https://royc4515.github.io/build-your-goat/';
@@ -72,6 +73,9 @@ export function renderIntro(root, { onStart, onSettings }) {
   const share = el('button', { class: 'btn btn--ghost', text: '📤  Share' });
   share.addEventListener('click', () => openShareSheet(gameSharePayload()));
 
+  const howto = el('button', { class: 'btn btn--ghost', text: '📖  How to Play' });
+  howto.addEventListener('click', () => openTutorial());
+
   root.append(
     el('section', {
       class: 'screen intro',
@@ -87,7 +91,7 @@ export function renderIntro(root, { onStart, onSettings }) {
         el('p', { class: 'subtitle', text: 'Six skills. One legend. Spin, lock, and reveal the greatest of all time you can assemble.' }),
         el('ul', { class: 'how', children: steps }),
         start,
-        el('div', { class: 'intro__actions', children: [settings, share] }),
+        el('div', { class: 'intro__actions', children: [howto, settings, share] }),
       ],
     })
   );
@@ -146,9 +150,22 @@ export function renderResult(root, { state, onPlayAgain, onChangeMode }) {
   const lineup = el('div', {
     class: 'lineup',
     children: categories.map((c) =>
-      playerCard(playerForMode(mode, picks[c.id]), { category: c, compact: true })
+      playerCard(playerForMode(mode, picks[c.id]), { category: c, categories, compact: true })
     ),
   });
+
+  // vs-CPU: show the CPU's six picks too, so both teams can be compared.
+  const cpuLineup = vsAI
+    ? el('div', {
+        class: 'lineup lineup--cpu',
+        children: categories.map((c) =>
+          playerCard(playerForMode(mode, state.boards.cpu[c.id]), { category: c, categories, compact: true }),
+        ),
+      })
+    : null;
+  const cpuHeading = vsAI
+    ? el('h2', { class: 'lineup__heading lineup__heading--cpu', text: '🤖  CPU LINEUP' })
+    : null;
 
   const again = el('button', { class: 'btn btn--primary', text: '🔁  Play Again' });
   again.addEventListener('click', () => {
@@ -176,6 +193,8 @@ export function renderResult(root, { state, onPlayAgain, onChangeMode }) {
         badges,
         el('h2', { class: 'lineup__heading', text: 'YOUR STARTING LINEUP' }),
         lineup,
+        cpuHeading,
+        cpuLineup,
         el('div', { class: 'result__actions', children: [again, change] }),
         share,
       ],

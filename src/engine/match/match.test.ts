@@ -86,26 +86,40 @@ describe('economy', () => {
   });
 });
 
-describe('vsAI snake draft', () => {
-  it('12 turns in snake order: human,cpu / cpu,human / human,cpu ...', () => {
+describe('vsAI coin-flip draft', () => {
+  it('12 turns in a consistent seat order (no snake reversal)', () => {
     const m = createMatch(vsAI(7));
     expect(m.draftOrder).toHaveLength(12);
     const seats = m.draftOrder.map((t) => t.actor);
-    expect(seats.slice(0, 4)).toEqual(['human', 'cpu', 'cpu', 'human']);
-    expect(m.phase).toBe('spinning'); // human picks first
+    const [a, b] = [seats[0], seats[1]];
+    expect(a).not.toBe(b);
+    for (let i = 0; i < 12; i++) expect(seats[i]).toBe(i % 2 === 0 ? a : b);
   });
 
-  it('after a human lock+advance, it is the cpu turn (aiThinking)', () => {
-    let m = createMatch(vsAI(7));
-    expect(currentActor(m)).toBe('human');
-    m = advanceAfterReveal(lockPick(m, m.pool.available[0]!));
-    expect(currentActor(m)).toBe('cpu');
-    expect(m.phase).toBe('aiThinking');
+  it('the coin flip is deterministic for a given seed', () => {
+    expect(createMatch(vsAI(7)).draftOrder[0]!.actor).toBe(createMatch(vsAI(7)).draftOrder[0]!.actor);
+  });
+
+  it('difficulty weights who picks first (rookie favors human, allstar favors cpu)', () => {
+    const humanFirst = (diff: 'rookie' | 'pro' | 'allstar') => {
+      let n = 0;
+      for (let s = 0; s < 300; s++) if (createMatch(vsAI(s, diff)).draftOrder[0]!.actor === 'human') n++;
+      return n;
+    };
+    const rookie = humanFirst('rookie');
+    const allstar = humanFirst('allstar');
+    expect(rookie).toBeGreaterThan(allstar);
+    expect(rookie).toBeGreaterThan(150); // ~0.67 * 300
+    expect(allstar).toBeLessThan(150); // ~0.33 * 300
   });
 
   it('resolveAITurn is deterministic and only picks available players', () => {
     let m = createMatch(vsAI(7));
-    m = advanceAfterReveal(lockPick(m, m.pool.available[0]!)); // cpu now on the clock
+    let guard = 0;
+    while (m.phase !== 'aiThinking' && guard++ < 6) {
+      if (m.phase === 'spinning') m = advanceAfterReveal(lockPick(m, m.pool.available[0]!));
+    }
+    expect(m.phase).toBe('aiThinking');
     const a = resolveAITurn(m);
     const b = resolveAITurn(m);
     expect(a.reveal).toEqual(b.reveal); // deterministic

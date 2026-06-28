@@ -7,7 +7,7 @@
 // same screens play solo and vs-AI. Each returns a cleanup the caller MUST run.
 
 import { el, clear } from './dom.js';
-import { currentCategory, currentTurn } from '../engine/match/match.js';
+import { currentCategory, currentTurn, firstPicker } from '../engine/match/match.js';
 import { HUMAN } from '../engine/types.js';
 import { categoriesForMode, playerForMode } from '../data/modes.js';
 import { createReel } from './reel.js';
@@ -15,6 +15,7 @@ import { playerCard } from './playerCard.js';
 import { poolMeter } from './hud/poolMeter.js';
 import { powerUps } from './hud/powerUps.js';
 import { buildProjection } from './hud/buildProjection.js';
+import { rolesTracker } from './hud/rolesTracker.js';
 import { opponentTray } from './hud/opponentTray.js';
 import { sfx } from './sound.js';
 
@@ -31,7 +32,16 @@ const humanBoard = (state) => state.boards[HUMAN] ?? {};
 export function mountPlayRound(root, state, { onLocked, onPause, onBack, onReroll, onFreeze }) {
   clear(root);
   const category = currentCategory(state);
+  const categories = categoriesForMode(state.config.mode);
   const stage = el('div', { class: 'reel-stage' });
+
+  // Live value of the player currently on the reel, in the active skill — so you
+  // can time the lock for a high one.
+  const liveNum = el('span', { class: 'live-value__num', text: '—' });
+  const liveValue = el('div', {
+    class: 'live-value',
+    children: [el('span', { class: 'live-value__cap', text: `${category.icon} ${category.label}` }), liveNum],
+  });
 
   const lockBtn = el('button', { class: 'btn btn--lock', text: '🔒  LOCK IN', attrs: { type: 'button' } });
 
@@ -41,12 +51,15 @@ export function mountPlayRound(root, state, { onLocked, onPause, onBack, onRerol
     children: [
       progressBar(state, [makeBackBtn(onBack), makePauseBtn(onPause)]),
       turnBanner(state),
+      tossNote(state),
       categoryBanner(category),
       poolMeter(state.pool.available.length, state.pool.order.length),
       stage,
+      liveValue,
       lockBtn,
       powerUps({ economy: state.economy, frozen: state.frozen, onReroll, onFreeze }),
       buildProjection(state),
+      rolesTracker(state),
       opponentBlock(state),
       slotTray(state),
     ],
@@ -56,9 +69,14 @@ export function mountPlayRound(root, state, { onLocked, onPause, onBack, onRerol
   const reel = createReel({
     mount: stage,
     category,
+    categories,
     pool: state.pool.available.map((id) => playerForMode(state.config.mode, id)),
     frozen: state.frozen,
     onSettled: (player) => onLocked(player.id),
+    onTick: (player) => {
+      liveNum.textContent = String(player.attrs[category.id] ?? 0);
+      liveNum.className = 'live-value__num ' + ratingTone(player.attrs[category.id] ?? 0);
+    },
   });
 
   const onLockClick = () => {
@@ -99,7 +117,7 @@ export function mountReveal(root, state, { onAdvance, onPause, onBack }) {
   const isLastTurn = state.cursor + 1 >= state.draftOrder.length;
 
   const stage = el('div', { class: 'reel-stage' });
-  const card = playerCard(player, { category });
+  const card = playerCard(player, { category, categories: categoriesForMode(state.config.mode) });
   card.classList.add('card--locked');
   stage.append(card);
 
@@ -140,7 +158,7 @@ export function mountReveal(root, state, { onAdvance, onPause, onBack }) {
     children.push(continueBtn);
   }
 
-  children.push(buildProjection(state), opponentBlock(state), slotTray(state));
+  children.push(buildProjection(state), rolesTracker(state), opponentBlock(state), slotTray(state));
   root.append(el('section', { class: 'screen play', style: { '--accent': category.accent }, children }));
 
   const onKey = (e) => {
@@ -175,9 +193,11 @@ export function mountAIThinking(root, state, { onResolved, onPause, onBack }) {
     children: [
       progressBar(state, [makeBackBtn(onBack), makePauseBtn(onPause)]),
       turnBanner(state),
+      tossNote(state),
       categoryBanner(category),
       el('div', { class: 'thinking', children: [el('div', { class: 'thinking__face', text: '🤖' }), el('div', { class: 'thinking__label', text: 'CPU is drafting' }), dots] }),
       buildProjection(state),
+      rolesTracker(state),
       opponentBlock(state),
       slotTray(state),
     ],
@@ -206,6 +226,26 @@ function makeBackBtn(onBack) {
     onBack();
   });
   return btn;
+}
+
+/** Color tone for the live pick value, mirroring the card stat tiers. */
+function ratingTone(v) {
+  if (v >= 95) return 'tone--elite';
+  if (v >= 88) return 'tone--great';
+  if (v >= 80) return 'tone--good';
+  return 'tone--ok';
+}
+
+/** One-time coin-flip result, shown until the human makes their first lock (so
+ *  it's visible whether the human or the CPU won the toss). */
+function tossNote(state) {
+  const humanPicked = Object.keys(state.boards[HUMAN] ?? {}).length > 0;
+  if (!hasOpponent(state) || humanPicked) return el('span', { class: 'toss-spacer' });
+  const youFirst = firstPicker(state) === HUMAN;
+  return el('div', {
+    class: ['toss-note', youFirst ? 'toss-note--me' : 'toss-note--cpu'],
+    text: youFirst ? '🪙 You won the toss — you pick first' : '🪙 CPU won the toss — it picks first',
+  });
 }
 
 /** Whose turn it is — only meaningful in a competitive match. */

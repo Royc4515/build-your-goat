@@ -1,18 +1,16 @@
-// Snake (serpentine) draft order. Both actors fill every category; within each
-// category they pick in turn, and the seat order reverses every round — so the
-// first-pick advantage (and the chance to deny the category leader) alternates.
-//
-// Solo collapses to a single actor picking each category in order.
+// Draft order. Both actors fill every category; within each category they pick
+// in a fixed seat order that does NOT change round to round (no snake/reversal).
+// A one-time coin flip in createMatch decides the seat order, so whoever wins the
+// toss picks first in every category. Solo collapses to a single actor.
 
 import type { ActorId, Category, Turn } from '../types.js';
 
-export function snakeDraftOrder(
-  actors: readonly ActorId[],
+export function buildDraftOrder(
+  seats: readonly ActorId[],
   categories: readonly Category[],
 ): Turn[] {
   const order: Turn[] = [];
   categories.forEach((c, round) => {
-    const seats = round % 2 === 0 ? actors : [...actors].reverse();
     for (const actor of seats) {
       order.push({ actor, categoryId: c.id, round });
     }

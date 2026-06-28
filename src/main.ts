@@ -25,6 +25,7 @@ import { policyFor } from './engine/ai/policy.js';
 import type { Difficulty, MatchConfig, MatchState, ModeId } from './engine/types.js';
 import { toggleMute, music, applyAudioSettings } from './ui/sound.js';
 import { fitScreen } from './ui/fit.js';
+import { openTutorial, hasSeenTutorial } from './ui/tutorial.js';
 import { DEFAULT_MODE } from './data/modes.js';
 import { preloadModeHeadshots } from './data/headshots.js';
 import { getSettings, onSettingsChange } from './core/settings.js';
@@ -251,3 +252,6 @@ function wireBrandButton(): void {
 wireMuteButton();
 wireBrandButton();
 render();
+
+// First-time players get the how-to once (reopenable from the intro screen).
+if (!hasSeenTutorial()) openTutorial();
