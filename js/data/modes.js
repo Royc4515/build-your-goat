@@ -54,6 +54,9 @@ const PHOTOS = Object.freeze({
   mirotic: '2022-03-22 ALBA Berlin gegen FC Barcelona Bàsquet (EuroLeague 2021-22) by Sandro Halank–014.jpg',
   vezenkov: 'Sasha Vezenkov 14 Olympiacos BC Euroleague 20260106 (3).jpg',
   walker: 'Lonnie Walker 1 BC Žalgiris EuroLeague 20250117 (2).jpg',
+  // NBA — current (rookies with no NBA CDN id yet, so a Commons photo)
+  flagg: 'Duke at UNC, Mar 2025, Flagg.jpg',
+  saraf: '2025-05-21 ALBA Berlin gegen ratiopharm Ulm (Basketball-Bundesliga 2024-25) by Sandro Halank–022.jpg',
   blatt: '2022-06-17 ALBA Berlin gegen FC Bayern München (Basketball-Bundesliga 2021-22) by Sandro Halank–037.jpg',
   campazzo: 'Facundo Campazzo 7 Real Madrid Baloncesto Euroleague 20250206 (6) (cropped).jpg',
   tavares: 'Edy Tavares 22 Real Madrid Baloncesto Euroleague 20250206 (5).jpg',
@@ -104,6 +107,19 @@ const PHOTOS = Object.freeze({
   'm-cr7': 'Cristiano Ronaldo 2275 (cropped).jpg',
   'm-diaz': 'FC RB Salzburg gegen FC Bayern München (2026-01-06 Testspiel) 40 (Luiz Díaz).jpg',
   'm-guler': 'Derbide Fenerbahçe Yedek Oyuncu Arda Güler (2021-22 Süper Lig - Cropped).jpg',
+  // Soccer — Mondial legends (World Cup icons; some reuse the soccer-legends file)
+  'wl-pele': 'Pele con brasil (cropped).jpg',
+  'wl-maradona': 'Argentina celebrando copa (cropped).jpg',
+  'wl-zidane': 'Zinedine Zidane by Tasnim 03.jpg',
+  'wl-r9': 'Ronaldo Luís Nazário de Lima 2019 (3x4 cropped).jpg',
+  'wl-beckenbauer': 'Franz Beckenbauer (1975).jpg',
+  'wl-muller': 'Gerd Müller c1973 (cropped).jpg',
+  'wl-rossi': 'Paolo Rossi Vicenza (cropped).jpg',
+  'wl-cafu': 'Cafu - 26.02.2026 - Cerimônia de apresentação das taças da Copa do Mundo de 2026.jpg',
+  'wl-matthaus': '2019 Lothar Matthäus.jpg',
+  'wl-romario': 'Senadores da 57ª Legislatura (52689451805).jpg',
+  'wl-fontaine': '23.05.66 Just Fontaine dans son magasin (1966) - 53Fi634 (Cropped).jpg',
+  'wl-moore': 'Bobby moore elgrafico 1970.jpg',
 });
 
 // --- builders (two sports key attrs by different ids) ------------------------
