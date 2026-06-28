@@ -78,7 +78,7 @@ export function playerCard(player, opts = {}) {
   const children = [jersey, meta];
 
   if (category) {
-    const value = player.attrs[category.id];
+    const value = player.attrs[category.id] ?? 0; // defensive: never render "undefined"
     children.push(
       el('div', {
         class: ['card__stat', ratingClass(value)],

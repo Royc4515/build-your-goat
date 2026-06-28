@@ -119,5 +119,6 @@ export function isComplete(state: MatchState): boolean {
 
 /** Score the completed build. Throws if called before the match is done. */
 export function matchResult(state: MatchState): BuildResult {
+  if (state.phase !== 'result') throw new Error('matchResult: match is not complete');
   return scoreBuild(state.picks, state.config.mode);
 }

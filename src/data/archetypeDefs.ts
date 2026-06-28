@@ -41,7 +41,8 @@ export const DYNASTY_ERA = Object.freeze({
 
 /** Each role left uncovered drops the overall cap by this much... */
 export const EMPTY_ROLE_PENALTY = 2;
-/** ...but never below this floor. */
+/** ...but never below this floor. (With the current 6-category modes the worst
+ *  cap is 89, so this floor only starts biting at 9+ categories.) */
 export const MIN_CAP = 82;
 /** Overall is always capped at the game's classic ceiling. */
 export const MAX_OVERALL = 99;

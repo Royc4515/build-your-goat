@@ -117,7 +117,11 @@ export interface Reveal {
 
 /** The shared draft pool. `order` is the fixed seeded permutation of the whole
  *  roster; `available` drains as players are locked (so the reel only ever shows
- *  who is still pickable — the contention/denial spine of the strategic layer). */
+ *  who is still pickable — the contention/denial spine of the strategic layer).
+ *
+ *  NOTE: at match start `available === order`, but after a Reroll `available` is
+ *  an arbitrary permutation of the *remaining* set — do NOT assume it stays a
+ *  subsequence of `order`. */
 export interface Pool {
   readonly order: readonly PlayerId[];
   readonly available: readonly PlayerId[];
