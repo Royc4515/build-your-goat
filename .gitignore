@@ -8,6 +8,7 @@ Thumbs.db
 node_modules/
 dist/
 coverage/
+.vite/
 
 # Stray screenshots / scratch images (the game uses no local image assets)
 *.png

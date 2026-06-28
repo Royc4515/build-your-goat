@@ -413,6 +413,12 @@ export function totalRoundsForMode(mode: ModeId): number {
   return categoriesForMode(mode).length;
 }
 
+/** Whether a mode's roster is large enough for a competitive draft with
+ *  `actorCount` players (each fills every category from the shared pool). */
+export function supportsActors(mode: ModeId, actorCount: number): boolean {
+  return rosterForMode(mode).length >= categoriesForMode(mode).length * actorCount;
+}
+
 // Lazily-built id -> player index, per mode (ids are unique within a roster).
 const _index: Record<ModeId, Record<PlayerId, Player>> = Object.create(null);
 export function playerForMode(mode: ModeId, id: PlayerId): Player {

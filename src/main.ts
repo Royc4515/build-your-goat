@@ -10,17 +10,19 @@ import { byId } from './ui/dom.js';
 import { renderIntro, renderResult } from './ui/screens.js';
 import { renderSettings } from './ui/settingsScreen.js';
 import { renderModeSelect } from './ui/modeSelect.js';
-import { mountPlayRound, mountReveal } from './ui/playScreen.js';
+import { mountPlayRound, mountReveal, mountAIThinking } from './ui/playScreen.js';
 import { mountPauseMenu } from './ui/pauseMenu.js';
 import {
   createMatch,
   lockPick,
   advanceAfterReveal,
+  resolveAITurn,
   isComplete,
   useReroll,
   useFreeze,
 } from './engine/match/match.js';
-import type { MatchState, ModeId } from './engine/types.js';
+import { policyFor } from './engine/ai/policy.js';
+import type { Difficulty, MatchConfig, MatchState, ModeId } from './engine/types.js';
 import { toggleMute, music, applyAudioSettings } from './ui/sound.js';
 import { fitScreen } from './ui/fit.js';
 import { DEFAULT_MODE } from './data/modes.js';
@@ -73,9 +75,35 @@ function setApp(next: AppState): void {
   render();
 }
 
-/** Begin a fresh solo match in the chosen mode. */
-function startMatch(mode: ModeId): AppState {
-  return { screen: 'play', match: createMatch({ kind: 'solo', mode, seed: newSeed() }) };
+/** The opponent choice made on the mode-select screen. */
+export interface Opponent {
+  readonly vsAI: boolean;
+  readonly difficulty: Difficulty;
+}
+
+/** Build a match config for the chosen mode + opponent. */
+function configFor(mode: ModeId, opp: Opponent): MatchConfig {
+  if (opp.vsAI) {
+    return {
+      kind: 'vsAI',
+      mode,
+      seed: newSeed(),
+      actors: ['human', 'cpu'],
+      policy: policyFor(opp.difficulty),
+    };
+  }
+  return { kind: 'solo', mode, seed: newSeed(), actors: ['human'] };
+}
+
+/** Begin a fresh match in the chosen mode + opponent. */
+function startMatch(mode: ModeId, opp: Opponent): AppState {
+  return { screen: 'play', match: createMatch(configFor(mode, opp)) };
+}
+
+/** Re-derive the opponent choice from a finished/running match (for "play again"). */
+function opponentOf(match: MatchState): Opponent {
+  const vsAI = match.config.actors.includes('cpu');
+  return { vsAI, difficulty: match.config.policy?.difficulty ?? 'pro' };
 }
 
 /** Mount the right play view for the current match: result, reveal, or a fresh
@@ -87,10 +115,18 @@ function mountPlaying(): void {
 
   if (isComplete(match)) {
     renderResult(root, {
-      mode: match.config.mode,
-      picks: match.picks,
-      onPlayAgain: () => setApp(startMatch(match.config.mode)),
+      state: match,
+      onPlayAgain: () => setApp(startMatch(match.config.mode, opponentOf(match))),
       onChangeMode: () => setApp({ screen: 'modeSelect', match: null }),
+    });
+    return;
+  }
+
+  if (match.phase === 'aiThinking') {
+    teardownRound = mountAIThinking(root, match, {
+      onResolved: () => setApp({ ...app, match: resolveAITurn(match) }),
+      onPause: pauseGame,
+      onBack,
     });
     return;
   }
@@ -164,10 +200,10 @@ function render(): void {
       break;
     case 'modeSelect':
       renderModeSelect(root, {
-        onPick: (mode: ModeId) => {
+        onPick: (mode: ModeId, opp: { vsAI: boolean; difficulty: string }) => {
           music.start();
           preloadModeHeadshots(mode);
-          setApp(startMatch(mode));
+          setApp(startMatch(mode, { vsAI: opp.vsAI, difficulty: opp.difficulty as Difficulty }));
         },
         onBack: () => setApp({ screen: 'intro', match: null }),
       });

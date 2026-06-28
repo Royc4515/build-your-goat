@@ -1,37 +1,49 @@
 // The match state machine — pure, immutable, deterministic. Every transition
-// returns a NEW frozen MatchState; nothing is mutated in place. This generalizes
-// the original core/state.js play loop: the seeded reel order lives in state, the
-// PRNG counter is serialized, so a whole match replays bit-for-bit from its seed.
+// returns a NEW frozen MatchState; nothing is mutated in place. The seeded pool
+// order and the PRNG counter live in state, so a whole match (including the CPU's
+// picks) replays bit-for-bit from its seed.
 //
-// M1 supports solo play over the full roster. Later milestones extend the SAME
-// machine: a draining pool (M2), economy power-ups (M3), and a draft order with
-// AI/human opponents (M5) — none of which change these core transitions' shape.
+// ONE machine drives every mode. Solo = a single 'human' actor over the six
+// categories. vsAI/hotseat add actors and a snake draft order; daily just fixes
+// the seed. Only setup differs — these transitions are shared.
 
 import type {
+  ActorId,
+  Board,
   BuildResult,
   Category,
   MatchConfig,
   MatchState,
   PlayerId,
+  Turn,
 } from '../types.js';
+import { HUMAN } from '../types.js';
 import { categoriesForMode, rosterForMode } from '../../data/modes.js';
 import { scoreBuild } from '../scoring/scoring.js';
 import { makeRng, shuffle } from '../rng.js';
 import { createPool, removeFromPool, isAvailable } from '../pool/pool.js';
 import { initEconomy, canReroll, canFreeze, spendReroll, spendFreeze } from '../economy/economy.js';
+import { snakeDraftOrder } from '../draft/draftOrder.js';
+import { chooseDraftPick } from '../ai/chooseDraftPick.js';
 
-/** Begin a fresh match. The seed fully determines the draft pool order. */
+/** Begin a fresh match. The seed fully determines the pool order and CPU picks. */
 export function createMatch(config: MatchConfig): MatchState {
   const rng = makeRng(config.seed);
+  const categories = categoriesForMode(config.mode);
   const pool = createPool(
     rng.next,
     rosterForMode(config.mode).map((p) => p.id),
   );
+  const draftOrder = snakeDraftOrder(config.actors, categories);
+  const boards: Record<ActorId, Board> = Object.create(null);
+  for (const a of config.actors) boards[a] = Object.freeze({});
+
   return Object.freeze({
     config,
-    phase: 'spinning',
-    round: 0,
-    picks: Object.freeze({}),
+    phase: draftOrder[0]?.actor === 'cpu' ? 'aiThinking' : 'spinning',
+    draftOrder: Object.freeze(draftOrder),
+    cursor: 0,
+    boards: Object.freeze(boards),
     pool,
     economy: initEconomy(),
     frozen: false,
@@ -40,50 +52,77 @@ export function createMatch(config: MatchConfig): MatchState {
   });
 }
 
-/** The category for the current round, or null once every slot is filled. */
-export function currentCategory(state: MatchState): Category | null {
-  const categories = categoriesForMode(state.config.mode);
-  return categories[state.round] ?? null;
+/** The turn (actor + category) currently on the clock, or null once done. */
+export function currentTurn(state: MatchState): Turn | null {
+  return state.draftOrder[state.cursor] ?? null;
 }
 
-/**
- * Lock the chosen player into the current category. The round does NOT advance
- * yet — `reveal` is set so the pick can be shown; advanceAfterReveal() moves on.
- * No-op if there's nothing to lock or a reveal is already pending.
- */
-export function lockPick(state: MatchState, playerId: PlayerId): MatchState {
-  const category = currentCategory(state);
-  if (!category || state.reveal) return state;
-  if (!isAvailable(state.pool, playerId)) return state; // drained players can't be re-picked
+/** The actor currently on the clock, or null once done. */
+export function currentActor(state: MatchState): ActorId | null {
+  return currentTurn(state)?.actor ?? null;
+}
 
+/** The category currently being drafted, or null once done. */
+export function currentCategory(state: MatchState): Category | null {
+  const turn = currentTurn(state);
+  if (!turn) return null;
+  return categoriesForMode(state.config.mode).find((c) => c.id === turn.categoryId) ?? null;
+}
+
+/** Commit `playerId` to the current actor's board and drain the pool. The turn
+ *  does NOT advance — `reveal` is set so the pick can be shown. No-op if there's
+ *  nothing to lock, a reveal is pending, or the player is already drained. */
+export function lockPick(state: MatchState, playerId: PlayerId): MatchState {
+  const turn = currentTurn(state);
+  if (!turn || state.reveal) return state;
+  if (!isAvailable(state.pool, playerId)) return state;
+  return commit(state, turn, playerId, state.rngState);
+}
+
+/** Resolve the CPU's turn: choose a pick via the policy, then commit it. Pure +
+ *  deterministic (consumes the match PRNG). No-op outside an aiThinking CPU turn. */
+export function resolveAITurn(state: MatchState): MatchState {
+  if (state.phase !== 'aiThinking' || !state.config.policy) return state;
+  const turn = currentTurn(state);
+  if (!turn || turn.actor !== 'cpu') return state;
+  const rng = makeRng(state.rngState);
+  const pick = chooseDraftPick(state, state.config.policy, rng.next);
+  return commit(state, turn, pick, rng.state());
+}
+
+/** Shared commit: write the pick, drain the pool, enter reveal. */
+function commit(state: MatchState, turn: Turn, playerId: PlayerId, rngState: number): MatchState {
+  const board = state.boards[turn.actor] ?? {};
   return Object.freeze({
     ...state,
     phase: 'reveal',
-    picks: Object.freeze({ ...state.picks, [category.id]: playerId }),
+    boards: Object.freeze({
+      ...state.boards,
+      [turn.actor]: Object.freeze({ ...board, [turn.categoryId]: playerId }),
+    }),
     pool: removeFromPool(state.pool, playerId),
-    reveal: Object.freeze({ categoryId: category.id, playerId }),
+    reveal: Object.freeze({ actor: turn.actor, categoryId: turn.categoryId, playerId }),
+    rngState,
   });
 }
 
-/** Finish the reveal and advance to the next round (or to the result). */
+/** Finish the reveal and advance to the next turn (or to the result). */
 export function advanceAfterReveal(state: MatchState): MatchState {
   if (!state.reveal) return state;
-  const nextRound = state.round + 1;
-  const done = nextRound >= categoriesForMode(state.config.mode).length;
+  const nextCursor = state.cursor + 1;
+  const done = nextCursor >= state.draftOrder.length;
+  const next = state.draftOrder[nextCursor];
   return Object.freeze({
     ...state,
-    phase: done ? 'result' : 'spinning',
-    round: nextRound,
+    phase: done ? 'result' : next?.actor === 'cpu' ? 'aiThinking' : 'spinning',
+    cursor: nextCursor,
     frozen: false, // a spent Freeze only lasts its round
     reveal: null,
   });
 }
 
-/**
- * Spend a Reroll: reshuffle the remaining pool (refresh which faces appear) using
- * the match's continued PRNG stream — deterministic given the seed. No-op unless
- * a reroll is available and the reel is live (spinning, no pending reveal).
- */
+/** Spend a Reroll: reshuffle the remaining pool via the continued PRNG. No-op
+ *  unless a reroll is available and a human reel is live (phase 'spinning'). */
 export function useReroll(state: MatchState): MatchState {
   if (state.phase !== 'spinning' || state.reveal || !canReroll(state.economy)) return state;
   const rng = makeRng(state.rngState);
@@ -96,29 +135,43 @@ export function useReroll(state: MatchState): MatchState {
   });
 }
 
-/**
- * Spend a Freeze: slow the current round's reel for a more precise lock. No-op
- * unless a freeze is available, the round isn't already frozen, and the reel is
- * live.
- */
+/** Spend a Freeze: slow the current round's reel. No-op unless available, the
+ *  round isn't already frozen, and a human reel is live. */
 export function useFreeze(state: MatchState): MatchState {
   if (state.phase !== 'spinning' || state.reveal || state.frozen || !canFreeze(state.economy)) {
     return state;
   }
-  return Object.freeze({
-    ...state,
-    economy: spendFreeze(state.economy),
-    frozen: true,
-  });
+  return Object.freeze({ ...state, economy: spendFreeze(state.economy), frozen: true });
 }
 
-/** True once the build is complete. */
+/** True once every turn is taken. */
 export function isComplete(state: MatchState): boolean {
   return state.phase === 'result';
 }
 
-/** Score the completed build. Throws if called before the match is done. */
-export function matchResult(state: MatchState): BuildResult {
+/** Score one actor's completed build. Throws before the match is done. */
+export function matchResult(state: MatchState, actor: ActorId = HUMAN): BuildResult {
   if (state.phase !== 'result') throw new Error('matchResult: match is not complete');
-  return scoreBuild(state.picks, state.config.mode);
+  const board = state.boards[actor];
+  if (!board) throw new Error(`matchResult: no board for actor '${actor}'`);
+  return scoreBuild(board, state.config.mode);
+}
+
+/** The winning actor, 'tie', or null if the match isn't finished. */
+export function matchWinner(state: MatchState): ActorId | 'tie' | null {
+  if (state.phase !== 'result') return null;
+  let best: ActorId | null = null;
+  let bestScore = -1;
+  let tie = false;
+  for (const a of state.config.actors) {
+    const overall = matchResult(state, a).overall;
+    if (overall > bestScore) {
+      bestScore = overall;
+      best = a;
+      tie = false;
+    } else if (overall === bestScore) {
+      tie = true;
+    }
+  }
+  return tie ? 'tie' : best;
 }
