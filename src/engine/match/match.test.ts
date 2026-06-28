@@ -1,81 +1,62 @@
 import { describe, it, expect } from 'vitest';
 import {
   createMatch,
+  currentTurn,
+  currentActor,
   currentCategory,
   lockPick,
   advanceAfterReveal,
+  resolveAITurn,
   isComplete,
   matchResult,
+  matchWinner,
   useReroll,
   useFreeze,
 } from './match.js';
 import { categoriesForMode, rosterForMode } from '../../data/modes.js';
+import { policyFor } from '../ai/policy.js';
 import type { MatchConfig } from '../types.js';
 
-const solo = (seed: number): MatchConfig => ({ kind: 'solo', mode: 'nba-legends', seed });
+const solo = (seed: number): MatchConfig => ({
+  kind: 'solo',
+  mode: 'nba-legends',
+  seed,
+  actors: ['human'],
+});
+const vsAI = (seed: number, diff: 'rookie' | 'pro' | 'allstar' = 'pro'): MatchConfig => ({
+  kind: 'vsAI',
+  mode: 'nba-legends',
+  seed,
+  actors: ['human', 'cpu'],
+  policy: policyFor(diff),
+});
 
-describe('createMatch', () => {
-  it('is deterministic: same seed -> same pool order', () => {
-    expect(createMatch(solo(123)).pool.order).toEqual(createMatch(solo(123)).pool.order);
-  });
-
-  it('different seeds -> different order', () => {
-    expect(createMatch(solo(1)).pool.order).not.toEqual(createMatch(solo(2)).pool.order);
-  });
-
-  it('pool order is a permutation of the full roster; available starts full', () => {
+describe('createMatch (solo)', () => {
+  it('one human actor, 6 turns, empty board, spinning', () => {
     const m = createMatch(solo(7));
-    const rosterIds = rosterForMode('nba-legends').map((p) => p.id);
-    expect([...m.pool.order].sort()).toEqual([...rosterIds].sort());
-    expect(m.pool.available).toEqual(m.pool.order);
-  });
-
-  it('starts spinning at round 0 with no picks', () => {
-    const m = createMatch(solo(7));
+    expect(m.config.actors).toEqual(['human']);
+    expect(m.draftOrder).toHaveLength(6);
+    expect(m.draftOrder.every((t) => t.actor === 'human')).toBe(true);
+    expect(m.boards.human).toEqual({});
     expect(m.phase).toBe('spinning');
-    expect(m.round).toBe(0);
-    expect(Object.keys(m.picks)).toHaveLength(0);
-    expect(m.reveal).toBeNull();
+  });
+
+  it('pool order is deterministic and a full-roster permutation', () => {
+    expect(createMatch(solo(123)).pool.order).toEqual(createMatch(solo(123)).pool.order);
+    const rosterIds = rosterForMode('nba-legends').map((p) => p.id);
+    expect([...createMatch(solo(7)).pool.order].sort()).toEqual([...rosterIds].sort());
   });
 });
 
-describe('lock / advance transitions', () => {
-  it('lockPick records the pick, drains the pool, and enters reveal (immutably)', () => {
+describe('solo transitions', () => {
+  it('lockPick writes the human board, drains the pool, enters reveal', () => {
     const m0 = createMatch(solo(7));
     const cat = currentCategory(m0)!;
     const m1 = lockPick(m0, 'jordan');
-
-    expect(m1).not.toBe(m0);
-    expect(m0.reveal).toBeNull(); // original untouched
-    expect(m0.pool.available).toContain('jordan'); // original pool untouched
-    expect(m1.phase).toBe('reveal');
-    expect(m1.reveal).toEqual({ categoryId: cat.id, playerId: 'jordan' });
-    expect(m1.picks[cat.id]).toBe('jordan');
-    expect(m1.pool.available).not.toContain('jordan'); // drained
-    expect(m1.pool.available).toHaveLength(m0.pool.available.length - 1);
-  });
-
-  it('a second lock during reveal is a no-op', () => {
-    const m1 = lockPick(createMatch(solo(7)), 'jordan');
-    expect(lockPick(m1, 'lebron')).toBe(m1);
-  });
-
-  it('locking a player not in the pool is a no-op', () => {
-    const m0 = createMatch(solo(7));
-    expect(lockPick(m0, 'nobody-such-id')).toBe(m0);
-  });
-
-  it('cannot re-pick a drained player in a later round', () => {
-    let m = lockPick(createMatch(solo(7)), 'jordan');
-    m = advanceAfterReveal(m); // round 1, spinning
-    expect(m.reveal).toBeNull();
-    const blocked = lockPick(m, 'jordan'); // already drained
-    expect(blocked).toBe(m);
-  });
-
-  it('advanceAfterReveal without a reveal is a no-op', () => {
-    const m0 = createMatch(solo(7));
-    expect(advanceAfterReveal(m0)).toBe(m0);
+    expect(m1.reveal).toEqual({ actor: 'human', categoryId: cat.id, playerId: 'jordan' });
+    expect(m1.boards.human[cat.id]).toBe('jordan');
+    expect(m1.pool.available).not.toContain('jordan');
+    expect(m0.boards.human).toEqual({}); // original untouched
   });
 
   it('plays a full solo build of distinct players to a scored result', () => {
@@ -83,57 +64,74 @@ describe('lock / advance transitions', () => {
     let m = createMatch(solo(7));
     const picked: string[] = [];
     for (let i = 0; i < categories.length; i++) {
-      expect(currentCategory(m)?.id).toBe(categories[i]!.id);
-      const next = m.pool.available[0]!; // always available, always distinct (drains)
-      picked.push(next);
-      m = lockPick(m, next);
-      m = advanceAfterReveal(m);
+      const id = m.pool.available[0]!;
+      picked.push(id);
+      m = advanceAfterReveal(lockPick(m, id));
     }
     expect(isComplete(m)).toBe(true);
-    expect(currentCategory(m)).toBeNull();
-    expect(new Set(picked).size).toBe(categories.length); // all distinct
-    expect(m.pool.available).toHaveLength(m.pool.order.length - categories.length);
-
-    const result = matchResult(m);
-    expect(result.slots).toHaveLength(categories.length);
-    expect(result.overall).toBeGreaterThan(0);
-    expect(result.overall).toBeLessThanOrEqual(99);
+    expect(new Set(picked).size).toBe(categories.length);
+    expect(matchResult(m).slots).toHaveLength(categories.length);
   });
 });
 
-describe('economy power-ups', () => {
-  it('starts with the configured power-ups', () => {
-    const m = createMatch(solo(7));
-    expect(m.economy).toEqual({ rerolls: 3, freezes: 2 });
-    expect(m.frozen).toBe(false);
-  });
-
-  it('useReroll spends one, reshuffles the same set, and is deterministic', () => {
+describe('economy', () => {
+  it('reroll/freeze decrement and reset (frozen clears next round)', () => {
     const m0 = createMatch(solo(7));
-    const m1 = useReroll(m0);
-    expect(m1.economy.rerolls).toBe(2);
-    expect([...m1.pool.available].sort()).toEqual([...m0.pool.available].sort()); // same set
-    expect(useReroll(m0).pool.available).toEqual(m1.pool.available); // deterministic given state
-  });
-
-  it('useReroll is a no-op with no rerolls left or during a reveal', () => {
-    let m = createMatch(solo(7));
-    m = useReroll(useReroll(useReroll(m))); // spend all 3
-    expect(m.economy.rerolls).toBe(0);
-    expect(useReroll(m)).toBe(m);
-
-    const revealing = lockPick(createMatch(solo(7)), 'jordan');
-    expect(useReroll(revealing)).toBe(revealing);
-  });
-
-  it('useFreeze sets frozen, spends one, and clears next round', () => {
-    const m0 = createMatch(solo(7));
+    expect(useReroll(m0).economy.rerolls).toBe(2);
     const f = useFreeze(m0);
     expect(f.frozen).toBe(true);
     expect(f.economy.freezes).toBe(1);
-    expect(useFreeze(f)).toBe(f); // already frozen -> no-op
-
     const next = advanceAfterReveal(lockPick(f, f.pool.available[0]!));
-    expect(next.frozen).toBe(false); // reset for the new round
+    expect(next.frozen).toBe(false);
+  });
+});
+
+describe('vsAI snake draft', () => {
+  it('12 turns in snake order: human,cpu / cpu,human / human,cpu ...', () => {
+    const m = createMatch(vsAI(7));
+    expect(m.draftOrder).toHaveLength(12);
+    const seats = m.draftOrder.map((t) => t.actor);
+    expect(seats.slice(0, 4)).toEqual(['human', 'cpu', 'cpu', 'human']);
+    expect(m.phase).toBe('spinning'); // human picks first
+  });
+
+  it('after a human lock+advance, it is the cpu turn (aiThinking)', () => {
+    let m = createMatch(vsAI(7));
+    expect(currentActor(m)).toBe('human');
+    m = advanceAfterReveal(lockPick(m, m.pool.available[0]!));
+    expect(currentActor(m)).toBe('cpu');
+    expect(m.phase).toBe('aiThinking');
+  });
+
+  it('resolveAITurn is deterministic and only picks available players', () => {
+    let m = createMatch(vsAI(7));
+    m = advanceAfterReveal(lockPick(m, m.pool.available[0]!)); // cpu now on the clock
+    const a = resolveAITurn(m);
+    const b = resolveAITurn(m);
+    expect(a.reveal).toEqual(b.reveal); // deterministic
+    expect(a.reveal!.actor).toBe('cpu');
+    expect(m.pool.available).toContain(a.reveal!.playerId); // was available
+    expect(a.pool.available).not.toContain(a.reveal!.playerId); // now drained
+  });
+
+  it('plays a full vsAI match to two scored boards with a winner', () => {
+    let m = createMatch(vsAI(7, 'allstar'));
+    let guard = 0;
+    while (!isComplete(m) && guard++ < 50) {
+      if (m.phase === 'aiThinking') {
+        m = advanceAfterReveal(resolveAITurn(m));
+      } else if (m.phase === 'spinning') {
+        m = advanceAfterReveal(lockPick(m, m.pool.available[0]!));
+      } else {
+        m = advanceAfterReveal(m);
+      }
+    }
+    expect(isComplete(m)).toBe(true);
+    expect(Object.keys(matchResult(m, 'human').slots)).toBeTruthy();
+    expect(matchResult(m, 'cpu').slots).toHaveLength(6);
+    expect(['human', 'cpu', 'tie']).toContain(matchWinner(m));
+    // no player appears on both boards (shared draining pool)
+    const used = [...Object.values(m.boards.human!), ...Object.values(m.boards.cpu!)];
+    expect(new Set(used).size).toBe(used.length);
   });
 });

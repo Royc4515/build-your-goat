@@ -6,6 +6,8 @@ import { el, clear } from './dom.js';
 import { playerCard } from './playerCard.js';
 import { MODES, categoriesForMode, playerForMode } from '../data/modes.js';
 import { scoreBuild } from '../engine/scoring/scoring.js';
+import { matchWinner } from '../engine/match/match.js';
+import { HUMAN } from '../engine/types.js';
 import { sfx } from './sound.js';
 import { openShareSheet } from './share.js';
 
@@ -91,12 +93,17 @@ export function renderIntro(root, { onStart, onSettings }) {
   );
 }
 
-/** Final reveal screen. */
-export function renderResult(root, { mode, picks, onPlayAgain, onChangeMode }) {
+/** Final reveal screen. Takes the finished match `state`. */
+export function renderResult(root, { state, onPlayAgain, onChangeMode }) {
   clear(root);
+  const mode = state.config.mode;
+  const picks = state.boards[HUMAN];
   const result = scoreBuild(picks, mode);
   const categories = categoriesForMode(mode);
+  const vsAI = state.config.actors.includes('cpu');
   sfx.reveal();
+
+  const outcome = vsAI ? versusOutcome(state, result) : null;
 
   const ring = el('div', {
     class: 'overall',
@@ -163,6 +170,7 @@ export function renderResult(root, { mode, picks, onPlayAgain, onChangeMode }) {
       class: 'screen result',
       children: [
         modeChip,
+        outcome,
         el('div', { class: 'result__head', children: [ring, tier] }),
         breakdown,
         badges,
@@ -173,4 +181,18 @@ export function renderResult(root, { mode, picks, onPlayAgain, onChangeMode }) {
       ],
     })
   );
+}
+
+/** Win/lose banner + CPU score for a vs-AI match. */
+function versusOutcome(state, humanResult) {
+  const mode = state.config.mode;
+  const cpuResult = scoreBuild(state.boards.cpu, mode);
+  const winner = matchWinner(state);
+  const verdict =
+    winner === 'tie'
+      ? { cls: 'outcome--tie', text: `🤝  Tie — ${humanResult.overall} all` }
+      : winner === HUMAN
+        ? { cls: 'outcome--win', text: `🏆  You win!  ${humanResult.overall} – ${cpuResult.overall}` }
+        : { cls: 'outcome--lose', text: `😤  CPU wins  ${cpuResult.overall} – ${humanResult.overall}` };
+  return el('div', { class: ['outcome', verdict.cls], text: verdict.text });
 }

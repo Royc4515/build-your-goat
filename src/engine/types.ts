@@ -98,25 +98,58 @@ export interface BuildResult {
 
 // --- match -------------------------------------------------------------------
 
-/** How a match is being played. Solo today; the rest arrive in later milestones,
- *  but they share this one state machine (only setup + opponents differ). */
+/** How a match is being played. They share this one state machine — only the
+ *  actor set, draft order, and seed source differ. */
 export type MatchKind = 'solo' | 'vsAI' | 'hotseat' | 'daily';
 
+/** A draft participant. Solo/daily use just 'human'; vsAI adds 'cpu'; hotseat
+ *  (M6) adds 'human2'. */
+export type ActorId = 'human' | 'human2' | 'cpu';
+
+/** The always-present local player. */
+export const HUMAN: ActorId = 'human';
+
+export type Difficulty = 'rookie' | 'pro' | 'allstar';
+
+/** Weights for the CPU "GM" valuation (see engine/ai). */
+export interface AIPolicy {
+  readonly difficulty: Difficulty;
+  readonly wValue: number;
+  readonly wDenial: number;
+  readonly wNeed: number;
+  readonly noise: number;
+}
+
 /** Phase WITHIN a match (distinct from app-level screen navigation). */
-export type MatchPhase = 'spinning' | 'reveal' | 'result';
+export type MatchPhase = 'spinning' | 'reveal' | 'aiThinking' | 'result';
 
 export interface MatchConfig {
   readonly kind: MatchKind;
   readonly mode: ModeId;
   /** Deterministic seed: dailySeed(date) for daily; host entropy otherwise. */
   readonly seed: number;
+  /** Draft participants in seat order (snake order is derived from this). */
+  readonly actors: readonly ActorId[];
+  /** Present iff a 'cpu' actor is in the match. */
+  readonly policy?: AIPolicy;
+}
+
+/** One scheduled pick: an actor filling a category in a given round. */
+export interface Turn {
+  readonly actor: ActorId;
+  readonly categoryId: CategoryId;
+  readonly round: number;
 }
 
 /** A pick captured but not yet confirmed (shown on the reveal screen). */
 export interface Reveal {
+  readonly actor: ActorId;
   readonly categoryId: CategoryId;
   readonly playerId: PlayerId;
 }
+
+/** One actor's picks: categoryId -> playerId. */
+export type Board = Readonly<Record<CategoryId, PlayerId>>;
 
 /** The shared draft pool. `order` is the fixed seeded permutation of the whole
  *  roster; `available` drains as players are locked (so the reel only ever shows
@@ -141,10 +174,14 @@ export interface EconomyState {
 export interface MatchState {
   readonly config: MatchConfig;
   readonly phase: MatchPhase;
-  readonly round: number;
-  readonly picks: Readonly<Record<CategoryId, PlayerId>>;
+  /** The full snake draft schedule; `cursor` indexes whose turn it is now. */
+  readonly draftOrder: readonly Turn[];
+  readonly cursor: number;
+  /** Per-actor picks. Solo/daily have just `human`; vsAI also has `cpu`. */
+  readonly boards: Readonly<Record<ActorId, Board>>;
   /** Seeded draft pool; the reel cycles `pool.available`. */
   readonly pool: Pool;
+  /** The local human's power-ups (single until hotseat makes them per-actor). */
   readonly economy: EconomyState;
   /** Whether the current round's reel is slowed by a spent Freeze. */
   readonly frozen: boolean;

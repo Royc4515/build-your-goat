@@ -3,13 +3,14 @@
 
 import { el } from '../dom.js';
 import { projectBuild } from '../../engine/scoring/scoring.js';
+import { HUMAN } from '../../engine/types.js';
 
 /**
  * @param {import('../../engine/types.js').MatchState} state
  * @returns {HTMLElement}
  */
 export function buildProjection(state) {
-  const p = projectBuild(state.picks, state.config.mode);
+  const p = projectBuild(state.boards[HUMAN] ?? {}, state.config.mode);
   const started = p.filled > 0;
   return el('div', {
     class: 'projection',
