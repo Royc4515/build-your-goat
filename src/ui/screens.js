@@ -12,6 +12,7 @@ import { sfx } from './sound.js';
 import { fitScreen } from './fit.js';
 import { openShareSheet } from './share.js';
 import { openTutorial } from './tutorial.js';
+import { dailyNumber } from '../engine/daily/daily.js';
 
 /** Public URL players are pointed at when they share. */
 const GAME_URL = 'https://royc4515.github.io/build-your-goat/';
@@ -98,13 +99,15 @@ export function renderIntro(root, { onStart, onSettings }) {
   );
 }
 
-/** Final reveal screen. Takes the finished match `state`. */
-export function renderResult(root, { state, onPlayAgain, onChangeMode }) {
+/** Final reveal screen. Takes the finished match `state`.
+ *  `dailyInfo` is provided for `kind:'daily'` matches: { dateStr, streak }. */
+export function renderResult(root, { state, onPlayAgain, onChangeMode, dailyInfo }) {
   clear(root);
   const mode = state.config.mode;
   const picks = state.boards[HUMAN];
   const result = scoreBuild(picks, mode);
   const categories = categoriesForMode(mode);
+  const isDaily = state.config.kind === 'daily';
   const vsAI = state.config.actors.includes('cpu');
   sfx.reveal();
 
@@ -127,10 +130,24 @@ export function renderResult(root, { state, onPlayAgain, onChangeMode }) {
     ],
   });
 
-  const modeChip = el('div', {
-    class: 'result__mode',
-    text: `${MODES[mode].icon} ${MODES[mode].label}`,
-  });
+  const dayNum = isDaily && dailyInfo ? dailyNumber(dailyInfo.dateStr) : null;
+  const modeChip = isDaily && dayNum !== null
+    ? el('div', { class: 'result__mode result__mode--daily', text: `📅  Daily #${dayNum}` })
+    : el('div', { class: 'result__mode', text: `${MODES[mode].icon} ${MODES[mode].label}` });
+
+  const emojiGrid = isDaily
+    ? el('div', {
+        class: 'emoji-grid',
+        text: result.slots.map((s) => emojiForScore(s.score)).join('  '),
+      })
+    : null;
+
+  const streakBadge = isDaily && dailyInfo && dailyInfo.streak.current > 0
+    ? el('div', {
+        class: 'streak-badge',
+        text: `🔥  ${dailyInfo.streak.current} day streak`,
+      })
+    : null;
 
   const synergyText =
     result.chemistry > 0
@@ -168,11 +185,10 @@ export function renderResult(root, { state, onPlayAgain, onChangeMode }) {
     ? el('h2', { class: 'lineup__heading lineup__heading--cpu', text: '🤖  CPU LINEUP' })
     : null;
 
-  const again = el('button', { class: 'btn btn--primary', text: '🔁  Play Again' });
-  again.addEventListener('click', () => {
-    sfx.click();
-    onPlayAgain();
-  });
+  const again = onPlayAgain
+    ? el('button', { class: 'btn btn--primary', text: '🔁  Play Again' })
+    : null;
+  if (again) again.addEventListener('click', () => { sfx.click(); onPlayAgain(); });
 
   const change = el('button', { class: 'btn btn--ghost', text: '🎮  Change Mode' });
   change.addEventListener('click', () => {
@@ -180,14 +196,25 @@ export function renderResult(root, { state, onPlayAgain, onChangeMode }) {
     onChangeMode();
   });
 
+  const sharePayload = isDaily && dayNum !== null
+    ? dailySharePayload(dayNum, result, dailyInfo?.streak)
+    : resultSharePayload(mode, picks, result);
   const share = el('button', { class: 'btn btn--primary btn--block', text: '📤  Share Result' });
-  share.addEventListener('click', () => openShareSheet(resultSharePayload(mode, picks, result)));
+  share.addEventListener('click', () => openShareSheet(sharePayload));
+
+  const actionBtns = [again, change].filter(Boolean);
+  const actionsEl = el('div', {
+    class: again ? 'result__actions' : 'result__actions result__actions--single',
+    children: actionBtns,
+  });
 
   root.append(
     el('section', {
       class: 'screen result',
       children: [
         modeChip,
+        emojiGrid,
+        streakBadge,
         outcome,
         el('div', { class: 'result__head', children: [ring, tier] }),
         breakdown,
@@ -196,11 +223,29 @@ export function renderResult(root, { state, onPlayAgain, onChangeMode }) {
         lineup,
         cpuHeading,
         cpuLineup,
-        el('div', { class: 'result__actions', children: [again, change] }),
+        actionsEl,
         share,
-      ],
+      ].filter(Boolean),
     })
   );
+}
+
+/** Score → colour-block emoji for the daily share grid. */
+function emojiForScore(score) {
+  if (score >= 80) return '🟩';
+  if (score >= 60) return '🟨';
+  return '🟥';
+}
+
+/** Share payload for a completed daily challenge. */
+function dailySharePayload(dayNum, result, streak) {
+  const emojiRow = result.slots.map((s) => emojiForScore(s.score)).join('');
+  const streakLine = streak && streak.current > 1 ? `\n🔥 ${streak.current} day streak` : '';
+  return {
+    title: `Daily #${dayNum} — ${result.overall} OVR`,
+    text: `🐐 Build Your GOAT — Daily #${dayNum}\n\n${emojiRow}  ${result.overall} OVR (${result.tier.label})${streakLine}`,
+    url: GAME_URL,
+  };
 }
 
 /** Win/lose banner + CPU score for a vs-AI match. */

@@ -23,12 +23,17 @@ import {
 } from './engine/match/match.js';
 import { policyFor } from './engine/ai/policy.js';
 import type { Difficulty, MatchConfig, MatchState, ModeId } from './engine/types.js';
+import { HUMAN } from './engine/types.js';
+import { scoreBuild } from './engine/scoring/scoring.js';
 import { toggleMute, music, applyAudioSettings } from './ui/sound.js';
 import { fitScreen } from './ui/fit.js';
 import { openTutorial, hasSeenTutorial } from './ui/tutorial.js';
 import { DEFAULT_MODE } from './data/modes.js';
 import { preloadModeHeadshots } from './data/headshots.js';
 import { getSettings, onSettingsChange } from './core/settings.js';
+import { dailySeed, todayUTC, DAILY_MODE } from './engine/daily/daily.js';
+import { recordDailyPlay } from './persistence/streak.js';
+import type { StreakData } from './persistence/streak.js';
 
 type Screen = 'intro' | 'modeSelect' | 'settings' | 'play';
 interface AppState {
@@ -79,11 +84,15 @@ function setApp(next: AppState): void {
 /** The opponent choice made on the mode-select screen. */
 export interface Opponent {
   readonly vsAI: boolean;
+  readonly isDaily: boolean;
   readonly difficulty: Difficulty;
 }
 
 /** Build a match config for the chosen mode + opponent. */
 function configFor(mode: ModeId, opp: Opponent): MatchConfig {
+  if (opp.isDaily) {
+    return { kind: 'daily', mode: DAILY_MODE, seed: dailySeed(todayUTC()), actors: ['human'] };
+  }
   if (opp.vsAI) {
     return {
       kind: 'vsAI',
@@ -104,7 +113,8 @@ function startMatch(mode: ModeId, opp: Opponent): AppState {
 /** Re-derive the opponent choice from a finished/running match (for "play again"). */
 function opponentOf(match: MatchState): Opponent {
   const vsAI = match.config.actors.includes('cpu');
-  return { vsAI, difficulty: match.config.policy?.difficulty ?? 'pro' };
+  const isDaily = match.config.kind === 'daily';
+  return { vsAI, isDaily, difficulty: match.config.policy?.difficulty ?? 'pro' };
 }
 
 /** Mount the right play view for the current match: result, reveal, or a fresh
@@ -115,9 +125,18 @@ function mountPlaying(): void {
   const onBack = () => setApp({ screen: 'modeSelect', match: null });
 
   if (isComplete(match)) {
+    let dailyInfo: { dateStr: string; streak: StreakData } | undefined;
+    if (match.config.kind === 'daily') {
+      const today = todayUTC();
+      const humanResult = scoreBuild(match.boards[HUMAN], match.config.mode);
+      dailyInfo = { dateStr: today, streak: recordDailyPlay(today, humanResult.overall) };
+    }
     renderResult(root, {
       state: match,
-      onPlayAgain: () => setApp(startMatch(match.config.mode, opponentOf(match))),
+      dailyInfo,
+      onPlayAgain: match.config.kind !== 'daily'
+        ? () => setApp(startMatch(match.config.mode, opponentOf(match)))
+        : null,
       onChangeMode: () => setApp({ screen: 'modeSelect', match: null }),
     });
     return;
@@ -208,10 +227,10 @@ function render(): void {
       break;
     case 'modeSelect':
       renderModeSelect(root, {
-        onPick: (mode: ModeId, opp: { vsAI: boolean; difficulty: string }) => {
+        onPick: (mode: ModeId, opp: { vsAI: boolean; isDaily: boolean; difficulty: string }) => {
           music.start();
           preloadModeHeadshots(mode);
-          setApp(startMatch(mode, { vsAI: opp.vsAI, difficulty: opp.difficulty as Difficulty }));
+          setApp(startMatch(mode, { vsAI: opp.vsAI, isDaily: opp.isDaily, difficulty: opp.difficulty as Difficulty }));
         },
         onBack: () => setApp({ screen: 'intro', match: null }),
       });
