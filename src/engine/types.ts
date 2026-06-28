@@ -62,13 +62,34 @@ export interface ScoredSlot {
   readonly score: number;
 }
 
+/** A synergy that fired for a build (applied multiplicatively). */
+export interface CompletedSynergy {
+  readonly id: string;
+  readonly label: string;
+  readonly icon: string;
+  readonly multiplier: number;
+}
+
+/** Result of evaluating archetype/role synergies for a set of picked players.
+ *  Completed synergies multiply the base; empty roles lower the cap. */
+export interface SynergyResult {
+  readonly multiplier: number;
+  readonly completed: readonly CompletedSynergy[];
+  /** Categories that are no picked player's signature (primary) role. */
+  readonly emptyRoles: readonly CategoryId[];
+  readonly rolesCovered: number;
+  readonly cap: number;
+}
+
 /** The full result of scoring a completed build. */
 export interface BuildResult {
   readonly slots: readonly ScoredSlot[];
   readonly base: number;
+  /** The synergy boost as an additive number (overall - base), for display. */
   readonly chemistry: number;
   readonly overall: number;
   readonly tier: Tier;
+  readonly synergy: SynergyResult;
   readonly badges: readonly string[];
 }
 

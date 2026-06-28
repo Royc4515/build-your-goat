@@ -1,10 +1,32 @@
 import { describe, it, expect } from 'vitest';
-import { scoreBuild } from './scoring.js';
+import { scoreBuild, projectBuild } from './scoring.js';
 
 // nba-legends categories: scoring, playmaking, defense, athleticism, clutch, leadership.
 
-describe('scoreBuild', () => {
-  it('scores a one-man-army Jordan build (chemistry capped, IMMORTAL)', () => {
+describe('scoreBuild (synergy model)', () => {
+  it('a diverse specialist build covers every role and scores 99', () => {
+    const picks = {
+      scoring: 'jordan', // signature: scoring
+      playmaking: 'magic', // playmaking
+      defense: 'russell', // defense
+      athleticism: 'lebron', // athleticism
+      clutch: 'kobe', // clutch
+      leadership: 'duncan', // leadership
+    };
+    const r = scoreBuild(picks, 'nba-legends');
+
+    expect(r.slots.map((s) => s.score)).toEqual([99, 99, 99, 99, 98, 96]);
+    expect(r.base).toBe(98);
+    expect(r.synergy.rolesCovered).toBe(6);
+    expect(r.synergy.emptyRoles).toEqual([]);
+    expect(r.overall).toBe(99); // base 98.3 x diversity+franchise, capped at 99
+    expect(r.tier.label).toBe('IMMORTAL GOAT');
+    expect(r.badges).toContain('🌐 Complete Squad');
+    expect(r.badges).toContain('💯 No Weak Links');
+  });
+
+  it('stacking one signature role leaves empty roles and caps the overall below base', () => {
+    // Jordan's signature is scoring; using him everywhere leaves 5 roles empty.
     const picks = {
       scoring: 'jordan',
       playmaking: 'jordan',
@@ -15,41 +37,30 @@ describe('scoreBuild', () => {
     };
     const r = scoreBuild(picks, 'nba-legends');
 
-    // per-slot = Jordan's rating in each category
-    expect(r.slots.map((s) => s.score)).toEqual([99, 85, 96, 97, 99, 98]);
-    expect(r.base).toBe(96); // round(574/6)
-    expect(r.chemistry).toBe(6); // 4 (one-man) + 2 (team) + 3 (era) capped at 6
-    expect(r.overall).toBe(99); // clamp(round(95.67 + 6))
-    expect(r.tier.label).toBe('IMMORTAL GOAT');
-    expect(r.badges).toContain('🦸 One-Man Army');
-    expect(r.badges).toContain('🏟️ Team Core');
-    expect(r.badges).toContain('⏳ 90s Era Squad');
-    expect(r.badges).not.toContain('🌍 All-Star Mix');
-    expect(r.badges).not.toContain('💯 No Weak Links');
-  });
-
-  it('scores a diverse specialist build (no chemistry, mix + no weak links)', () => {
-    const picks = {
-      scoring: 'jordan', // 99
-      playmaking: 'magic', // 99
-      defense: 'russell', // 99
-      athleticism: 'lebron', // 99
-      clutch: 'kobe', // 98
-      leadership: 'duncan', // 96
-    };
-    const r = scoreBuild(picks, 'nba-legends');
-
-    expect(r.slots.map((s) => s.score)).toEqual([99, 99, 99, 99, 98, 96]);
-    expect(r.base).toBe(98); // round(590/6)
-    expect(r.chemistry).toBe(0);
-    expect(r.overall).toBe(98);
-    expect(r.tier.label).toBe('IMMORTAL GOAT');
-    expect(r.badges).toContain('🌍 All-Star Mix');
-    expect(r.badges).toContain('💯 No Weak Links');
-    expect(r.badges).not.toContain('🦸 One-Man Army');
+    expect(r.synergy.rolesCovered).toBe(1);
+    expect(r.synergy.emptyRoles).toHaveLength(5);
+    expect(r.synergy.cap).toBe(99 - 5 * 2); // 89
+    expect(r.overall).toBe(89); // capped below the 96 base
+    expect(r.base).toBe(96);
+    expect(r.chemistry).toBeLessThan(0); // the cap pulled it down
   });
 
   it('throws on an incomplete build', () => {
     expect(() => scoreBuild({ scoring: 'jordan' }, 'nba-legends')).toThrow();
+  });
+});
+
+describe('projectBuild (partial)', () => {
+  it('returns 0 for an empty build', () => {
+    const p = projectBuild({}, 'nba-legends');
+    expect(p.overall).toBe(0);
+    expect(p.filled).toBe(0);
+    expect(p.total).toBe(6);
+  });
+
+  it('averages the filled slots as they come in', () => {
+    const p = projectBuild({ scoring: 'jordan', defense: 'russell' }, 'nba-legends');
+    expect(p.filled).toBe(2);
+    expect(p.overall).toBe(Math.round((99 + 99) / 2)); // jordan scoring 99, russell defense 99
   });
 });

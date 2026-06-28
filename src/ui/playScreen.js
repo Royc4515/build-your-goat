@@ -14,6 +14,7 @@ import { createReel } from './reel.js';
 import { playerCard } from './playerCard.js';
 import { poolMeter } from './hud/poolMeter.js';
 import { powerUps } from './hud/powerUps.js';
+import { buildProjection } from './hud/buildProjection.js';
 import { sfx } from './sound.js';
 
 /**
@@ -45,6 +46,7 @@ export function mountPlayRound(root, state, { onLocked, onPause, onBack, onRerol
       stage,
       lockBtn,
       powerUps({ economy: state.economy, frozen: state.frozen, onReroll, onFreeze }),
+      buildProjection(state),
       slotTray(state),
     ],
   });
@@ -121,6 +123,7 @@ export function mountReveal(root, state, { onAdvance, onPause, onBack }) {
       stage,
       locked,
       continueBtn,
+      buildProjection(state),
       slotTray(state),
     ],
   });

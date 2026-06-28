@@ -1,56 +1,74 @@
-// Pure scoring for a completed GOAT build. Given the picks (categoryId ->
-// playerId) it computes per-slot scores, the chemistry bonus, the overall
-// rating, tier and badges. No DOM, no side effects.
-//
-// M1 keeps the original flat chemistry bonus verbatim; M4 replaces it with the
-// archetype-synergy multiplier (see the milestone plan).
+// Pure scoring for a GOAT build. Per-slot score = the player's rating in that
+// category. The overall is the slot average lifted by a synergy MULTIPLIER and
+// held under a cap set by how many signature-roles the build leaves uncovered
+// (M4 — replaces the old flat chemistry bonus).
 
-import type { BuildResult, CategoryId, ModeId, Player, PlayerId, ScoredSlot } from '../types.js';
+import type {
+  BuildResult,
+  Category,
+  CategoryId,
+  ModeId,
+  PlayerId,
+  ScoredSlot,
+  Tier,
+} from '../types.js';
 import { categoriesForMode, playerForMode } from '../../data/modes.js';
 import { tierFor } from './tiers.js';
-import { badgesFor, maxDuplicateCount, isUniform } from './badges.js';
+import { badgesFor } from './badges.js';
+import { evaluateSynergies } from '../archetypes/synergy.js';
+import { MAX_OVERALL } from '../../data/archetypeDefs.js';
 
+/** Score a completed build (throws if any slot is unfilled). */
 export function scoreBuild(
   picks: Readonly<Record<CategoryId, PlayerId>>,
   mode: ModeId,
 ): BuildResult {
-  const slots: ScoredSlot[] = categoriesForMode(mode).map((c) => {
-    const playerId = picks[c.id];
-    if (!playerId) throw new Error(`scoreBuild: missing pick for category '${c.id}'`);
-    const player = playerForMode(mode, playerId);
-    const score = player.attrs[c.id];
-    if (score === undefined) {
-      throw new Error(`scoreBuild: player '${playerId}' has no '${c.id}' rating`);
-    }
-    return { categoryId: c.id, label: c.label, icon: c.icon, accent: c.accent, playerId, score };
-  });
-
+  const categories = categoriesForMode(mode);
+  const slots = categories.map((c) => slotFor(c, picks, mode));
   const players = slots.map((s) => playerForMode(mode, s.playerId));
+
   const base = avg(slots.map((s) => s.score));
-  const chemistry = chemistryBonus(players);
-  const overall = clamp(Math.round(base + chemistry), 0, 99);
+  const synergy = evaluateSynergies(players, categories);
+  const overall = clamp(Math.round(base * synergy.multiplier), 0, Math.min(MAX_OVERALL, synergy.cap));
 
   return {
     slots,
     base: Math.round(base),
-    chemistry,
+    chemistry: overall - Math.round(base),
     overall,
     tier: tierFor(overall),
-    badges: badgesFor(players, slots),
+    synergy,
+    badges: badgesFor(synergy.completed, slots),
   };
 }
 
-/**
- * Chemistry rewards thematic builds: stacking one player ("one-man army"),
- * leaning on a single team, or a single-era squad. Capped so it tops up a good
- * build rather than dominating it.
- */
-function chemistryBonus(players: readonly Player[]): number {
-  let bonus = 0;
-  bonus += maxDuplicateCount(players.map((p) => p.id)) >= 3 ? 4 : 0; // one-man army
-  bonus += maxDuplicateCount(players.map((p) => p.team)) >= 4 ? 2 : 0; // team core
-  bonus += isUniform(players.map((p) => p.era)) ? 3 : 0; // same-era squad
-  return Math.min(bonus, 6);
+/** A lightweight live projection for an in-progress build: the running average
+ *  of the filled slots (no synergy — that needs the full team to be meaningful). */
+export function projectBuild(
+  picks: Readonly<Record<CategoryId, PlayerId>>,
+  mode: ModeId,
+): { overall: number; tier: Tier; filled: number; total: number } {
+  const categories = categoriesForMode(mode);
+  const filled = categories.filter((c) => picks[c.id]).map((c) => slotFor(c, picks, mode));
+  const total = categories.length;
+  if (filled.length === 0) return { overall: 0, tier: tierFor(0), filled: 0, total };
+  const overall = Math.round(avg(filled.map((s) => s.score)));
+  return { overall, tier: tierFor(overall), filled: filled.length, total };
+}
+
+function slotFor(
+  c: Category,
+  picks: Readonly<Record<CategoryId, PlayerId>>,
+  mode: ModeId,
+): ScoredSlot {
+  const playerId = picks[c.id];
+  if (!playerId) throw new Error(`scoreBuild: missing pick for category '${c.id}'`);
+  const player = playerForMode(mode, playerId);
+  const score = player.attrs[c.id];
+  if (score === undefined) {
+    throw new Error(`scoreBuild: player '${playerId}' has no '${c.id}' rating`);
+  }
+  return { categoryId: c.id, label: c.label, icon: c.icon, accent: c.accent, playerId, score };
 }
 
 function avg(nums: readonly number[]): number {
